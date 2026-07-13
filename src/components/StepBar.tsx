@@ -8,9 +8,12 @@ const pendingKey = (flightCode: string) => `dinner-checkin:pending:${flightCode}
 export interface PendingSignup {
   /** 接龍模式下：這次報名用的名額 id */
   inviteId?: string;
-  /** 這次一起報名的所有人（第一位是主報名者） */
-  people: { name: string; industry: string }[];
+  /** 主報名者 */
+  name: string;
+  industry: string;
   note: string;
+  /** 選位頁最多可選幾個位子（接龍名額或開放模式上限），同行者姓名在選位頁填 */
+  maxSeats: number;
 }
 
 // 「填完資料、還沒選位」的暫存，包成小 external store 讓頁面能純粹地讀

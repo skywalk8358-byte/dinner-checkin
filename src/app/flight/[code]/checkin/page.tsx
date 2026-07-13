@@ -27,8 +27,6 @@ export default function CheckinPage() {
 
   const [name, setName] = useState("");
   const [industry, setIndustry] = useState("");
-  const [count, setCount] = useState(1);
-  const [companions, setCompanions] = useState<{ name: string; industry: string }[]>([]);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -74,19 +72,8 @@ export default function CheckinPage() {
   const remaining = invite ? Math.max(0, invite.quota - used) : 0;
   const seatsLeft = Math.max(0, flightCapacity(flight) - confirmedCount);
 
-  // 可報人數上限：接龍模式看名額；開放模式一次最多 4 位
-  const maxParty = inviteMode ? Math.max(1, remaining) : Math.min(4, Math.max(1, isStandby ? 4 : seatsLeft));
-  const effCount = Math.min(count, maxParty);
-
-  const companionAt = (i: number) => companions[i] ?? { name: "", industry: "" };
-  const setCompanion = (i: number, patch: Partial<{ name: string; industry: string }>) => {
-    setCompanions((prev) => {
-      const next = [...prev];
-      while (next.length <= i) next.push({ name: "", industry: "" });
-      next[i] = { ...next[i], ...patch };
-      return next;
-    });
-  };
+  // 選位頁可選的座位數上限：接龍模式看名額；開放模式一次最多 4 位
+  const maxSeats = inviteMode ? Math.max(1, remaining) : Math.min(4, Math.max(1, seatsLeft));
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,28 +89,18 @@ export default function CheckinPage() {
         setError("這筆接龍名額已全部使用。如需調整人數，請聯絡主辦人。");
         return;
       }
-      if (effCount > remaining) {
-        setError(`接龍名額只剩 ${remaining} 位，無法報 ${effCount} 位。`);
-        return;
-      }
-    }
-
-    const people = [
-      { name: name.trim(), industry: industry.trim() },
-      ...Array.from({ length: effCount - 1 }, (_, i) => ({
-        name: companionAt(i).name.trim(),
-        industry: companionAt(i).industry.trim(),
-      })),
-    ];
-    if (people.some((p) => !p.name)) {
-      setError("請填寫每一位同行者的姓名。");
-      return;
     }
 
     if (isStandby) {
-      // 已滿：整組建立候補，不經過選位
+      // 已滿：建立候補，不經過選位
       setSubmitting(true);
-      const res = addGroup({ flightId: flight.id, inviteId: invite?.id, people, note, seats: [] });
+      const res = addGroup({
+        flightId: flight.id,
+        inviteId: invite?.id,
+        people: [{ name: name.trim(), industry: industry.trim() }],
+        note,
+        seats: [],
+      });
       if (res.ok) router.push(`/pass/${res.attendees[0].passToken}?new=1`);
       else {
         setSubmitting(false);
@@ -132,7 +109,13 @@ export default function CheckinPage() {
       return;
     }
 
-    writePending(flight.code, { inviteId: invite?.id, people, note: note.trim() });
+    writePending(flight.code, {
+      inviteId: invite?.id,
+      name: name.trim(),
+      industry: industry.trim(),
+      note: note.trim(),
+      maxSeats,
+    });
     router.push(`/flight/${flight.code}/seat`);
   };
 
@@ -193,52 +176,6 @@ export default function CheckinPage() {
             />
           </label>
 
-          {(!inviteMode || (invite && remaining > 0)) && maxParty > 1 && (
-            <div>
-              <span className="text-sub mb-1.5 block text-[13px] font-medium">報名人數（含本人）</span>
-              <div className="flex flex-wrap gap-2">
-                {Array.from({ length: maxParty }, (_, i) => i + 1).map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setCount(n)}
-                    className={`min-w-14 rounded-xl px-4 py-2.5 text-center text-[14px] font-semibold transition ${
-                      effCount === n ? "bg-accent text-white" : "bg-inset text-ink hover:bg-[#e4e4ea]"
-                    }`}
-                  >
-                    {n} 位
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {Array.from({ length: effCount - 1 }, (_, i) => (
-            <div key={i} className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="text-sub mb-1.5 block text-[13px] font-medium">同行者 {i + 1} 姓名 *</span>
-                <input
-                  value={companionAt(i).name}
-                  onChange={(e) => setCompanion(i, { name: e.target.value })}
-                  className="field-input"
-                  placeholder="同行者姓名"
-                  maxLength={30}
-                  required
-                />
-              </label>
-              <label className="block">
-                <span className="text-sub mb-1.5 block text-[13px] font-medium">產業</span>
-                <input
-                  value={companionAt(i).industry}
-                  onChange={(e) => setCompanion(i, { industry: e.target.value })}
-                  className="field-input"
-                  placeholder="產業（選填）"
-                  maxLength={20}
-                />
-              </label>
-            </div>
-          ))}
-
           <label className="block">
             <span className="text-sub mb-1.5 block text-[13px] font-medium">備註（忌口、過敏等）</span>
             <input
@@ -254,12 +191,13 @@ export default function CheckinPage() {
 
           <div className="mt-1 flex flex-col gap-2.5">
             <button type="submit" disabled={!name.trim() || submitting} className="btn btn-primary w-full text-[16px]">
-              {isStandby
-                ? "JOIN STANDBY · 加入候補"
-                : effCount > 1
-                  ? `NEXT · 為 ${effCount} 位選位 →`
-                  : "NEXT · 前往選位 →"}
+              {isStandby ? "JOIN STANDBY · 加入候補" : "NEXT · 前往選位 →"}
             </button>
+            {!isStandby && maxSeats > 1 && (!inviteMode || invite) && (
+              <p className="text-sub text-center text-[12px]">
+                下一頁可直接選 1～{maxSeats} 個位子，同行者姓名選位時再填
+              </p>
+            )}
             <Link href={`/flight/${flight.code}`} className="btn btn-secondary w-full text-[14px]">
               ← 返回
             </Link>

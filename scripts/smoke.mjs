@@ -43,32 +43,32 @@ await page.screenshot({ path: OUT + "02-flight.png", fullPage: true });
 if (!(await page.getByText("CHECK IN · 開始報名").isVisible())) fail("flight page missing check-in CTA");
 console.log("✓ flight page");
 
-// 3. 報名表單：林小美是接龍名單上的名字（名額 2），一次報 2 位
+// 3. 報名表單：林小美是接龍名單上的名字（名額 2），填完名字直接去選位
 await page.getByText("CHECK IN · 開始報名").click();
 await page.waitForURL("**/checkin");
 await page.getByPlaceholder("王小明").fill("林小美");
 await page.waitForTimeout(400);
 if (!(await page.getByText(/接龍名額 2 位/).isVisible())) fail("invite quota hint missing");
 await page.getByPlaceholder("例：餐飲、科技、金融").fill("設計業");
-await page.getByText("2 位", { exact: true }).click();
-await page.getByPlaceholder("同行者姓名").fill("王小弟");
-await page.getByPlaceholder("產業（選填）").fill("學生");
 await page.waitForTimeout(800);
 await page.screenshot({ path: OUT + "03-checkin-form.png", fullPage: true });
-await page.getByText(/NEXT · 為 2 位選位/).click();
-console.log("✓ check-in form (invite, group of 2)");
+await page.getByText("NEXT · 前往選位").click();
+console.log("✓ check-in form (invite)");
 
-// 4. 選位：一次選 5A + 5B
+// 4. 選位：名額 2 位 → 直接點 5A + 5B，同行者姓名在確認列填
 await page.waitForURL("**/seat");
 await page.waitForTimeout(1500);
 const seat = (code) =>
   page.locator("g").filter({ has: page.locator("title", { hasText: new RegExp(`^座位 ${code}$`) }) });
 await seat("5A").click();
 await seat("5B").click();
+const confirmBtn = page.getByText("CONFIRM · 確認選位");
+if (await confirmBtn.isEnabled()) fail("confirm should be disabled until companion name filled");
+await page.getByPlaceholder("同行者姓名").fill("王小弟");
 await page.waitForTimeout(800);
 await page.screenshot({ path: OUT + "04-seatmap.png", fullPage: true });
-await page.getByText("CONFIRM · 確認選位").click();
-console.log("✓ seat selection (2 seats)");
+await confirmBtn.click();
+console.log("✓ seat selection (2 seats, companion named inline)");
 
 // 5. 登機證（主報名者）＋同行旅客清單
 await page.waitForURL("**/pass/**");

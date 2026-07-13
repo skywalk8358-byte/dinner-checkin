@@ -11,7 +11,7 @@ import { addGroup, assignSeat, byToken, flightByCode, takenSeats, useDB } from "
 
 /**
  * 選位頁。兩種進場方式：
- * 1. 報名流程第二步——一次為整組人選位（一人一個座位，依點選順序配對）
+ * 1. 報名流程第二步——可直接選 1～名額上限個位子；第 2 位起的同行者姓名在確認列填
  * 2. 已有登機證但還沒座位的人補選位：/flight/XX/seat?pass=<token>
  */
 export default function SeatPage() {
@@ -25,6 +25,8 @@ export default function SeatPage() {
   const pending = usePendingSignup(reseatToken ? undefined : flight?.code);
 
   const [selected, setSelected] = useState<string[]>([]);
+  /** 第 i+2 個座位的同行者姓名（index 0 = 第二個座位） */
+  const [companionNames, setCompanionNames] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   // 點擊已入座的座位 → 顯示是誰（姓名＋產業）
   const [peek, setPeek] = useState<{ code: string; name: string; industry?: string } | null>(null);
@@ -70,29 +72,43 @@ export default function SeatPage() {
   }
 
   const taken = takenSeats(db, flight.id);
-  const people = reseatAttendee
-    ? [{ name: reseatAttendee.name, industry: reseatAttendee.industry ?? "" }]
-    : (pending?.people ?? []);
-  const need = people.length;
+  const leadName = reseatAttendee?.name ?? pending?.name ?? "";
+  const maxSeats = reseatAttendee ? 1 : Math.max(1, pending?.maxSeats ?? 1);
 
   const toggleSeat = (seatCode: string) => {
     setError(null);
     setSelected((prev) => {
       if (prev.includes(seatCode)) return prev.filter((s) => s !== seatCode);
-      if (prev.length < need) return [...prev, seatCode];
+      if (prev.length < maxSeats) return [...prev, seatCode];
       // 已選滿：換掉最後一個
-      return [...prev.slice(0, need - 1), seatCode];
+      return [...prev.slice(0, maxSeats - 1), seatCode];
     });
   };
 
+  const setCompanionName = (i: number, value: string) => {
+    setCompanionNames((prev) => {
+      const next = [...prev];
+      while (next.length <= i) next.push("");
+      next[i] = value;
+      return next;
+    });
+  };
+
+  const companionsOk = selected.slice(1).every((_, i) => (companionNames[i] ?? "").trim());
+  const canConfirm = selected.length >= 1 && companionsOk;
+
   const confirm = () => {
-    if (selected.length !== need) return;
+    if (!canConfirm) return;
 
     if (pending) {
+      const people = [
+        { name: pending.name, industry: pending.industry },
+        ...selected.slice(1).map((_, i) => ({ name: companionNames[i].trim(), industry: "" })),
+      ];
       const res = addGroup({
         flightId: flight.id,
         inviteId: pending.inviteId,
-        people: pending.people,
+        people,
         note: pending.note,
         seats: selected,
       });
@@ -103,7 +119,7 @@ export default function SeatPage() {
         } else if (res.reason === "quota-exceeded") {
           setError("接龍名額不足（可能剛被使用），請回上一步確認。");
         } else if (res.reason === "not-enough-seats") {
-          setError("剩餘座位不足，請回上一步調整人數。");
+          setError("剩餘座位不足，請減少選位數。");
         } else {
           setError("報名失敗，請回上一步重新開始。");
         }
@@ -134,9 +150,9 @@ export default function SeatPage() {
         <div>
           <h1 className="text-[22px] font-bold tracking-tight">選擇座位</h1>
           <p className="text-sub mt-1 text-[13px]">
-            {need > 1
-              ? `請為 ${people.map((p) => p.name).join("、")} 選 ${need} 個位子（依點選順序配對）`
-              : `${people[0]?.name ?? ""} · 點空位入座`}
+            {maxSeats > 1
+              ? `${leadName} · 名額 ${maxSeats} 位——直接點 1～${maxSeats} 個空位，同行者姓名在下方填`
+              : `${leadName} · 點空位入座`}
             ；點已入座的位子可以看看是誰
           </p>
         </div>
@@ -167,23 +183,35 @@ export default function SeatPage() {
       {/* 底部確認列 */}
       <div className="sticky bottom-3 mt-6">
         <div className="card flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
-          {need > 1 ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {people.map((p, i) => (
-                <span key={i} className="pill pill-dim text-[13px]">
-                  {p.name}
-                  <span className={`ml-1 font-bold ${selected[i] ? "text-accent" : "text-sub"}`}>
-                    {selected[i] ?? "—"}
-                  </span>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+            {selected.length === 0 ? (
+              <div className="flex items-baseline gap-2.5">
+                <span className="text-sub text-[13px] font-medium">座位</span>
+                <span className="text-sub text-[24px] font-extrabold">—</span>
+                {maxSeats > 1 && <span className="text-sub text-[12px]">可選 {maxSeats} 位</span>}
+              </div>
+            ) : (
+              selected.map((s, i) => (
+                <span key={s} className="flex items-center gap-1.5">
+                  <span className="text-accent text-[18px] font-extrabold tabular-nums">{s}</span>
+                  {i === 0 ? (
+                    <span className="text-[13px] font-medium">{leadName}</span>
+                  ) : (
+                    <input
+                      value={companionNames[i - 1] ?? ""}
+                      onChange={(e) => setCompanionName(i - 1, e.target.value)}
+                      placeholder="同行者姓名"
+                      maxLength={30}
+                      className="field-input w-28 px-2.5 py-1.5 text-[13px]"
+                    />
+                  )}
                 </span>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-baseline gap-2.5">
-              <span className="text-sub text-[13px] font-medium">座位</span>
-              <span className="text-accent text-[24px] font-extrabold tabular-nums">{selected[0] ?? "—"}</span>
-            </div>
-          )}
+              ))
+            )}
+            {selected.length > 0 && selected.length < maxSeats && (
+              <span className="text-sub text-[12px]">還可再選 {maxSeats - selected.length} 位</span>
+            )}
+          </div>
           <div className="flex items-center gap-2.5">
             <Link
               href={pending ? `/flight/${flight.code}/checkin` : `/pass/${reseatToken}`}
@@ -191,7 +219,7 @@ export default function SeatPage() {
             >
               ← 上一步
             </Link>
-            <button onClick={confirm} disabled={selected.length !== need} className="btn btn-primary">
+            <button onClick={confirm} disabled={!canConfirm} className="btn btn-primary">
               CONFIRM · 確認選位
             </button>
           </div>
