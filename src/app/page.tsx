@@ -1,23 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { BoardHeader, BoardShell } from "@/components/Chrome";
-import { Flap } from "@/components/SplitFlap";
+import { BoardHeader, BoardShell, Loading } from "@/components/Chrome";
 import { useNow } from "@/lib/client";
-import { fmtDate, fmtTime } from "@/lib/format";
+import { fmtDateShort, fmtTime } from "@/lib/format";
 import { confirmedOf, useDB, useHydrated } from "@/lib/store";
 import { flightCapacity, flightPhase, PHASE_LABEL } from "@/lib/types";
 
-const TONE_CLASS = { ok: "text-ok", warn: "text-warn", bad: "text-bad", dim: "text-dim" } as const;
+const TONE_PILL = { ok: "pill-ok", warn: "pill-warn", bad: "pill-bad", dim: "pill-dim" } as const;
 
-const ROW_GRID =
-  "grid grid-cols-[58px_92px_1fr_96px] gap-2 sm:grid-cols-[72px_110px_1fr_110px_84px_170px]";
-
-/** 出發航班看板（首頁） */
+/** 航班列表（首頁） */
 export default function DeparturesPage() {
   const db = useDB();
   const hydrated = useHydrated();
-  const now = useNow(15_000); // 看板狀態 15 秒刷新一次就夠
+  const now = useNow(15_000); // 狀態 15 秒刷新一次就夠
 
   const flights = [...db.flights].sort((a, b) => {
     const aPast = new Date(a.departAt).getTime() < now;
@@ -30,30 +26,19 @@ export default function DeparturesPage() {
     <BoardShell>
       <BoardHeader />
 
-      <div className="mb-4 flex items-baseline justify-between">
-        <Flap text="DEPARTURES" className="text-xl font-bold sm:text-2xl" />
-        <span className="text-dim text-[11px] tracking-[0.35em] sm:text-xs">出發航班 · 點選報名</span>
-      </div>
+      <h1 className="text-[28px] font-bold tracking-tight">出發航班</h1>
+      <p className="text-sub mt-1 text-[14px]">選擇要參加的聚餐，開始報名</p>
 
-      <div className="panel overflow-hidden">
-        <div className={`${ROW_GRID} border-b border-seam px-4 py-2.5 text-[10px] tracking-[0.25em] text-dim sm:text-xs`}>
-          <span>TIME</span>
-          <span>FLIGHT</span>
-          <span>DESTINATION 目的地</span>
-          <span className="hidden sm:block">GATE</span>
-          <span className="hidden sm:block">SEATS</span>
-          <span className="text-right sm:text-left">STATUS</span>
-        </div>
-
+      <div className="mt-5 flex flex-col gap-3">
         {!hydrated ? (
-          <div className="text-dim px-4 py-12 text-center text-xs tracking-[0.35em]">LOADING…</div>
+          <Loading />
         ) : flights.length === 0 ? (
-          <div className="text-dim px-4 py-12 text-center text-sm">
-            目前沒有航班——到{" "}
-            <Link href="/admin" className="text-glow underline">
+          <div className="card text-sub px-4 py-12 text-center text-[14px]">
+            目前沒有活動——到{" "}
+            <Link href="/admin" className="text-accent font-medium">
               主辦人後台
             </Link>{" "}
-            開一班吧
+            開一場吧
           </div>
         ) : (
           flights.map((f) => {
@@ -65,40 +50,36 @@ export default function DeparturesPage() {
               <Link
                 key={f.id}
                 href={`/flight/${f.code}`}
-                className={`${ROW_GRID} items-center border-b border-seam/50 px-4 py-3 transition last:border-b-0 hover:bg-tile ${
-                  phase === "departed" ? "opacity-40" : ""
+                className={`card flex items-center gap-4 px-5 py-4 transition hover:shadow-lg ${
+                  phase === "departed" ? "opacity-55" : ""
                 }`}
               >
-                <Flap text={fmtTime(f.departAt)} className="text-sm font-semibold" />
-                <Flap text={f.code} className="text-sm font-semibold" />
-                <div className="min-w-0">
-                  <Flap text={f.venueName} className="text-sm font-semibold" />
-                  <div className="text-dim mt-1 truncate text-[11px] tracking-wider">
-                    {f.title} · {fmtDate(f.departAt)}
+                <div className="w-[64px] shrink-0 text-center">
+                  <div className="text-[21px] font-bold tabular-nums leading-tight">{fmtTime(f.departAt)}</div>
+                  <div className="text-sub mt-0.5 text-[12px]">{fmtDateShort(f.departAt)}</div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[16px] font-semibold">{f.title}</div>
+                  <div className="text-sub mt-0.5 truncate text-[13px]">
+                    {f.code} · {f.venueName}
                   </div>
                 </div>
-                <span className="hidden text-sm sm:block">{f.gate.split(" ")[0]}</span>
-                <span className="hidden text-sm sm:block">
-                  {confirmed}/{cap}
-                </span>
-                <span
-                  className={`text-right text-[11px] font-bold tracking-widest sm:text-left sm:text-xs ${TONE_CLASS[label.tone]} ${
-                    phase === "boarding" ? "blink" : ""
-                  }`}
-                >
-                  {label.en}
-                  <span className="ml-1.5 hidden lg:inline">{label.zh}</span>
-                </span>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className={`pill ${TONE_PILL[label.tone]}`}>{label.zh}</span>
+                  <span className="text-sub text-[12px] tabular-nums">
+                    {confirmed}/{cap}
+                  </span>
+                </div>
               </Link>
             );
           })
         )}
       </div>
 
-      <footer className="text-dim mt-6 flex items-center justify-between text-[10px] tracking-[0.25em] sm:text-[11px]">
-        <span>DEMO MODE · 資料暫存於此瀏覽器</span>
-        <Link href="/admin" className="transition hover:text-glow">
-          CREW ONLY · 主辦人後台 →
+      <footer className="text-sub mt-8 flex items-center justify-between text-[12px]">
+        <span>示範模式 · 資料暫存於此瀏覽器</span>
+        <Link href="/admin" className="text-accent font-medium">
+          主辦人後台 →
         </Link>
       </footer>
     </BoardShell>

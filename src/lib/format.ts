@@ -15,6 +15,12 @@ export function fmtDate(iso: string): string {
   return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} (${WEEKDAYS_ZH[d.getDay()]})`;
 }
 
+/** 8/8 (六) —— 卡片列表用的短日期 */
+export function fmtDateShort(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()} (${WEEKDAYS_ZH[d.getDay()]})`;
+}
+
 /** 08 AUG —— 登機證用的航空風日期 */
 export function fmtDateEn(iso: string): string {
   const d = new Date(iso);

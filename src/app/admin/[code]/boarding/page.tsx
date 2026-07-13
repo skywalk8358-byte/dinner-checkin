@@ -4,9 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AdminGate } from "@/components/AdminGate";
-import { BoardHeader, BoardShell, NotFoundBoard } from "@/components/Chrome";
+import { BoardHeader, BoardShell, Loading, NotFoundBoard } from "@/components/Chrome";
 import { QrScan } from "@/components/QrScan";
-import { Flap } from "@/components/SplitFlap";
 import { fmtTime } from "@/lib/format";
 import {
   checkInByToken,
@@ -35,12 +34,12 @@ function beep(ok: boolean) {
   } catch {}
 }
 
-const FLASH_STYLE: Record<ScanResult["kind"], { cls: string; en: string; zh: string }> = {
-  ok: { cls: "border-ok/60 bg-ok/10 text-ok", en: "WELCOME ABOARD", zh: "登機完成" },
-  already: { cls: "border-warn/60 bg-warn/10 text-warn", en: "ALREADY BOARDED", zh: "已經報到過了" },
-  standby: { cls: "border-warn/60 bg-warn/10 text-warn", en: "STANDBY PASS", zh: "候補票——請洽主辦人遞補" },
-  "wrong-flight": { cls: "border-bad/60 bg-bad/10 text-bad", en: "WRONG FLIGHT", zh: "不是本場活動的登機證" },
-  invalid: { cls: "border-bad/60 bg-bad/10 text-bad", en: "INVALID PASS", zh: "無效的登機證" },
+const FLASH_STYLE: Record<ScanResult["kind"], { cls: string; icon: string; title: string; sub: string }> = {
+  ok: { cls: "tint-ok", icon: "✓", title: "歡迎登機", sub: "報到完成" },
+  already: { cls: "tint-warn", icon: "！", title: "已經報到過了", sub: "這張登機證稍早已完成報到" },
+  standby: { cls: "tint-warn", icon: "！", title: "候補票", sub: "請洽主辦人遞補後再報到" },
+  "wrong-flight": { cls: "tint-bad", icon: "✕", title: "不是本場活動", sub: "這張登機證屬於其他活動" },
+  invalid: { cls: "tint-bad", icon: "✕", title: "無效的登機證", sub: "查無此票，請確認 QR CODE" },
 };
 
 /** 登機口：QR 掃描報到 + 手動名單備援 */
@@ -62,14 +61,14 @@ export default function BoardingPage() {
 
   return (
     <BoardShell wide>
-      <BoardHeader sub="BOARDING GATE · 登機口" />
+      <BoardHeader sub="登機口" />
       <AdminGate>
         {!hydrated ? (
-          <div className="text-dim py-12 text-center text-xs tracking-[0.35em]">LOADING…</div>
+          <Loading />
         ) : (
           (() => {
             const flight = flightByCode(db, decodeURIComponent(code));
-            if (!flight) return <NotFoundBoard message={`找不到航班 ${decodeURIComponent(code)}`} backHref="/admin" backLabel="返回後台" />;
+            if (!flight) return <NotFoundBoard message={`找不到活動 ${decodeURIComponent(code)}`} backHref="/admin" backLabel="返回後台" />;
 
             const confirmed = confirmedOf(db, flight.id);
             const boarded = confirmed.filter((a) => a.checkedInAt);
@@ -102,14 +101,17 @@ export default function BoardingPage() {
             return (
               <>
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-baseline gap-x-3">
-                    <Flap text={flight.code} className="text-xl font-bold" />
-                    <span className="text-sm">{flight.title}</span>
-                    <span className="text-dim text-xs tracking-widest">GATE {flight.gate}</span>
+                  <div className="min-w-0">
+                    <h1 className="truncate text-[22px] font-bold tracking-tight">{flight.title}</h1>
+                    <p className="text-sub mt-0.5 text-[13px]">
+                      {flight.code} · 登機門 {flight.gate}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-dim text-xs tracking-[0.3em]">BOARDED</span>
-                    <Flap text={`${boarded.length}/${confirmed.length}`} className="text-2xl font-bold text-ok" />
+                  <div className="text-right">
+                    <div className="text-sub text-[12px] font-medium">已報到</div>
+                    <div className="text-ok-deep text-[26px] font-bold tabular-nums leading-tight">
+                      {boarded.length}/{confirmed.length}
+                    </div>
                   </div>
                 </div>
 
@@ -120,11 +122,11 @@ export default function BoardingPage() {
                     <div className="mt-3 flex items-center gap-3">
                       <button
                         onClick={() => setCameraOn(!cameraOn)}
-                        className={`btn text-sm ${cameraOn ? "btn-danger" : "btn-primary"}`}
+                        className={`btn text-[14px] ${cameraOn ? "btn-danger" : "btn-primary"}`}
                       >
                         {cameraOn ? "■ 停止掃描" : "▶ 啟動相機掃描"}
                       </button>
-                      <span className="text-dim text-[11px] leading-relaxed">
+                      <span className="text-sub text-[12px] leading-relaxed">
                         掃乘客登機證上的 QR CODE
                         <br />
                         （相機需要 HTTPS 或 localhost）
@@ -132,17 +134,16 @@ export default function BoardingPage() {
                     </div>
 
                     {flash && (
-                      <div className={`mt-4 rounded-xl border px-5 py-6 text-center ${FLASH_STYLE[flash.kind].cls}`}>
-                        <div className="text-2xl font-bold tracking-[0.15em]">
-                          {flash.kind === "ok" ? "✓ " : flash.kind === "invalid" || flash.kind === "wrong-flight" ? "✕ " : "！"}
-                          {FLASH_STYLE[flash.kind].en}
+                      <div className={`tint ${FLASH_STYLE[flash.kind].cls} mt-4 px-5 py-5 text-center`}>
+                        <div className="text-[22px] font-bold">
+                          {FLASH_STYLE[flash.kind].icon} {FLASH_STYLE[flash.kind].title}
                         </div>
-                        <div className="mt-1 text-sm tracking-widest">{FLASH_STYLE[flash.kind].zh}</div>
+                        <div className="mt-0.5 text-[13px] opacity-80">{FLASH_STYLE[flash.kind].sub}</div>
                         {"attendee" in flash && (
-                          <div className="mt-3 text-lg font-semibold">
+                          <div className="mt-2.5 text-[17px] font-semibold">
                             {flash.attendee.name}
-                            {flash.attendee.dept && <span className="ml-2 text-sm opacity-80">{flash.attendee.dept}</span>}
-                            {flash.attendee.seat && <span className="ml-3 text-xl">SEAT {flash.attendee.seat}</span>}
+                            {flash.attendee.dept && <span className="ml-2 text-[13px] opacity-75">{flash.attendee.dept}</span>}
+                            {flash.attendee.seat && <span className="ml-3">座位 {flash.attendee.seat}</span>}
                           </div>
                         )}
                       </div>
@@ -157,26 +158,34 @@ export default function BoardingPage() {
                       className="field-input"
                       placeholder="🔍 搜尋姓名 / 部門 / 座位（手動報到備援）"
                     />
-                    <div className="panel mt-3 max-h-[480px] overflow-y-auto">
+                    <div className="card mt-3 max-h-[480px] overflow-y-auto">
                       {list.length === 0 ? (
-                        <div className="text-dim px-4 py-8 text-center text-sm">沒有符合的乘客</div>
+                        <div className="text-sub px-4 py-10 text-center text-[14px]">沒有符合的乘客</div>
                       ) : (
                         list.map((a) => (
                           <div
                             key={a.id}
-                            className="flex items-center justify-between gap-3 border-b border-seam/40 px-4 py-2.5 last:border-b-0"
+                            className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 first:border-t-0"
                           >
                             <div className="flex min-w-0 items-baseline gap-3">
-                              <span className="glow-text w-10 shrink-0 text-base font-bold">{a.seat ?? "—"}</span>
-                              <span className="truncate text-sm font-semibold">{a.name}</span>
-                              {a.dept && <span className="text-dim hidden text-xs sm:inline">{a.dept}</span>}
+                              <span className="text-accent w-10 shrink-0 text-[15px] font-bold tabular-nums">
+                                {a.seat ?? "—"}
+                              </span>
+                              <span className="truncate text-[14px] font-semibold">{a.name}</span>
+                              {a.dept && <span className="text-sub hidden text-[12px] sm:inline">{a.dept}</span>}
                             </div>
                             {a.checkedInAt ? (
-                              <button onClick={() => setBoarded(a.id, false)} className="btn btn-ghost shrink-0 px-2.5 py-1 text-[11px]">
+                              <button
+                                onClick={() => setBoarded(a.id, false)}
+                                className="btn btn-secondary shrink-0 px-3 py-1.5 text-[12px]"
+                              >
                                 ✓ {fmtTime(a.checkedInAt)}（點擊取消）
                               </button>
                             ) : (
-                              <button onClick={() => setBoarded(a.id, true)} className="btn btn-primary shrink-0 px-2.5 py-1 text-[11px]">
+                              <button
+                                onClick={() => setBoarded(a.id, true)}
+                                className="btn btn-primary shrink-0 px-3 py-1.5 text-[12px]"
+                              >
                                 報到
                               </button>
                             )}
@@ -185,7 +194,7 @@ export default function BoardingPage() {
                       )}
                     </div>
                     {standbyCount > 0 && (
-                      <p className="text-warn mt-2 text-xs tracking-wider">
+                      <p className="text-warn-deep mt-2 text-[13px]">
                         另有 {standbyCount} 位候補——遞補請到「乘客名單」操作。
                       </p>
                     )}
@@ -193,7 +202,7 @@ export default function BoardingPage() {
                 </div>
 
                 <div className="mt-6">
-                  <Link href={`/admin/${flight.code}`} className="text-dim text-xs tracking-widest hover:text-glow">
+                  <Link href={`/admin/${flight.code}`} className="text-accent text-[13px] font-medium">
                     ← 返回乘客名單
                   </Link>
                 </div>

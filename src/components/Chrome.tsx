@@ -1,31 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { Clock } from "./Clock";
-import { Flap } from "./SplitFlap";
 
-/** 每頁共用的看板頁首：航空公司 LOGO + 即時時鐘 */
+/** 每頁共用的頁首：極簡 wordmark + 頁面說明 */
 export function BoardHeader({ sub }: { sub?: string }) {
   return (
-    <header className="mb-6 flex items-end justify-between gap-4 border-b border-seam pb-4">
-      <div>
-        <Link href="/" className="group inline-flex items-baseline gap-2">
-          <span className="glow-text text-2xl font-bold tracking-[0.18em] sm:text-3xl">
-            ✈ DINNER<span className="text-glow-soft">AIR</span>
-          </span>
-        </Link>
-        <div className="text-dim mt-1 text-[10px] tracking-[0.35em] sm:text-xs">
-          {sub ?? "DINNER CHECK-IN SYSTEM · 聚餐報名系統"}
-        </div>
-      </div>
-      <Clock />
+    <header className="mb-6 flex items-center justify-between pt-2">
+      <Link href="/" className="text-[17px] font-bold tracking-tight">
+        <span className="text-accent">✈</span> Dinner Air
+      </Link>
+      <span className="text-sub max-w-[60%] truncate text-[13px]">{sub ?? "聚餐報名"}</span>
     </header>
   );
 }
 
 export function BoardShell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
-    <main className={`mx-auto min-h-screen px-4 py-6 sm:px-6 ${wide ? "max-w-6xl" : "max-w-5xl"}`}>
+    <main className={`mx-auto min-h-screen px-4 pb-10 pt-4 sm:px-6 ${wide ? "max-w-5xl" : "max-w-xl"}`}>
       {children}
     </main>
   );
@@ -33,23 +24,28 @@ export function BoardShell({ children, wide = false }: { children: React.ReactNo
 
 export function SectionTitle({ en, zh }: { en: string; zh: string }) {
   return (
-    <h2 className="mb-3 flex items-baseline gap-3">
-      <Flap text={en} className="text-sm font-semibold sm:text-base" />
-      <span className="text-dim text-xs tracking-[0.3em]">{zh}</span>
+    <h2 className="mb-3 flex items-baseline gap-2">
+      <span className="text-[20px] font-bold">{zh}</span>
+      <span className="text-sub text-[12px] font-medium tracking-wide">{en}</span>
     </h2>
   );
 }
 
-export function NotFoundBoard({ message, backHref = "/", backLabel = "返回航班看板" }: {
+export function Loading() {
+  return <div className="card text-sub px-4 py-12 text-center text-[14px]">載入中…</div>;
+}
+
+export function NotFoundBoard({ message, backHref = "/", backLabel = "返回航班列表" }: {
   message: string;
   backHref?: string;
   backLabel?: string;
 }) {
   return (
-    <div className="panel flex flex-col items-center gap-4 px-6 py-16 text-center">
-      <Flap text="NOT FOUND" className="text-2xl font-bold text-bad" />
-      <p className="text-dim text-sm">{message}</p>
-      <Link href={backHref} className="btn btn-ghost text-xs">
+    <div className="card flex flex-col items-center gap-4 px-6 py-14 text-center">
+      <span className="text-[40px]">🛫</span>
+      <p className="text-[17px] font-semibold">找不到這個頁面</p>
+      <p className="text-sub -mt-2 text-[14px]">{message}</p>
+      <Link href={backHref} className="btn btn-secondary text-[14px]">
         ← {backLabel}
       </Link>
     </div>

@@ -1,259 +1,208 @@
 @import "tailwindcss";
 
+/* Apple Wallet 票卡風：亮色、大留白、卡片式、系統字體 */
 @theme {
-  --color-night: #05080f;
-  --color-panel: #0b1120;
-  --color-tile: #121a2b;
-  --color-seam: #223048;
-  --color-glow: #ffb300;
-  --color-glow-soft: #ffd76a;
-  --color-dim: #64719a;
-  --color-ok: #35e08a;
-  --color-warn: #ffd23e;
-  --color-bad: #ff5d5d;
-  --color-paper: #f6f1e4;
-  --color-paper-dark: #ece3cc;
-  --color-ink: #1d2b4e;
-  --color-ink-soft: #6b7699;
-  --font-board: "IBM Plex Mono", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", ui-monospace, monospace;
-  --font-ticket: "Barlow Condensed", "Noto Sans TC", "PingFang TC", ui-sans-serif, sans-serif;
+  --color-canvas: #f2f2f7;
+  --color-card: #ffffff;
+  --color-line: #e4e4e9;
+  --color-inset: #efeff4;
+  --color-ink: #17181c;
+  --color-sub: #85868d;
+  --color-accent: #007aff;
+  --color-accent-deep: #0064d2;
+  --color-ok: #34c759;
+  --color-ok-deep: #1f9d48;
+  --color-warn: #ff9500;
+  --color-warn-deep: #a35f00;
+  --color-bad: #ff3b30;
+  --color-bad-deep: #c72c23;
+  --color-gold: #b8892e;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro TC", "SF Pro Text", "Helvetica Neue",
+    "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  background:
-    radial-gradient(1100px 480px at 50% -10%, rgba(255, 179, 0, 0.07), transparent 62%),
-    var(--color-night);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-ui);
 }
 
-/* 淡淡的 CRT 掃描線，加強機場看板氛圍 */
-.scanlines::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 50;
-  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.015) 0 1px, transparent 1px 3px);
+/* ── 卡片 ─────────────────────────────────────────── */
+.card {
+  background: var(--color-card);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04), 0 8px 24px rgba(17, 24, 39, 0.05);
 }
 
-/* ── 翻牌看板 ─────────────────────────────────────────── */
-.flap {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 2px;
-}
-.flap-cell {
-  position: relative;
+/* ── 狀態膠囊 ─────────────────────────────────────── */
+.pill {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 1.15ch;
-  padding: 0.08em 0.14em;
-  border-radius: 3px;
-  background: linear-gradient(180deg, #1b2436 0%, #131b2c 48%, #0d1424 52%, #101828 100%);
-  box-shadow: inset 0 0 0 1px rgba(34, 48, 72, 0.7);
+  gap: 0.3rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }
-.flap-cell::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 1px;
-  background: rgba(0, 0, 0, 0.55);
-}
+.pill-ok { background: rgba(52, 199, 89, 0.13); color: var(--color-ok-deep); }
+.pill-warn { background: rgba(255, 149, 0, 0.15); color: var(--color-warn-deep); }
+.pill-bad { background: rgba(255, 59, 48, 0.12); color: var(--color-bad-deep); }
+.pill-dim { background: var(--color-inset); color: var(--color-sub); }
+.pill-accent { background: rgba(0, 122, 255, 0.12); color: var(--color-accent); }
+.pill-gold { background: rgba(184, 137, 46, 0.14); color: var(--color-gold); }
 
-.glow-text {
-  text-shadow: 0 0 10px rgba(255, 179, 0, 0.35);
-}
-
-.blink {
-  animation: blink 1.15s steps(2, start) infinite;
-}
-@keyframes blink {
-  0%, 58% { opacity: 1; }
-  59%, 100% { opacity: 0.25; }
-}
-
-/* ── 面板與表單 ───────────────────────────────────────── */
-.panel {
-  background: var(--color-panel);
-  border: 1px solid var(--color-seam);
+/* ── 提示區塊 ─────────────────────────────────────── */
+.tint {
   border-radius: 14px;
+  padding: 0.8rem 1rem;
+  font-size: 14px;
+  line-height: 1.6;
 }
+.tint-ok { background: rgba(52, 199, 89, 0.12); color: var(--color-ok-deep); }
+.tint-warn { background: rgba(255, 149, 0, 0.13); color: var(--color-warn-deep); }
+.tint-bad { background: rgba(255, 59, 48, 0.1); color: var(--color-bad-deep); }
+.tint-accent { background: rgba(0, 122, 255, 0.1); color: #0058b8; }
 
-.field-input {
-  width: 100%;
-  background: var(--color-tile);
-  border: 1px solid var(--color-seam);
-  border-radius: 8px;
-  padding: 0.6rem 0.85rem;
-  color: var(--color-glow);
-  font-family: var(--font-board);
-  letter-spacing: 0.04em;
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.field-input:focus {
-  border-color: var(--color-glow);
-  box-shadow: 0 0 0 1px rgba(255, 179, 0, 0.35);
-}
-.field-input::placeholder {
-  color: rgba(100, 113, 154, 0.55);
-}
-
+/* ── 按鈕 ─────────────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  border-radius: 10px;
-  padding: 0.7rem 1.4rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  gap: 0.45rem;
+  border-radius: 14px;
+  padding: 0.72rem 1.3rem;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
-  border: 1px solid transparent;
-  transition: background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s;
+  border: none;
+  transition: background 0.15s, color 0.15s, opacity 0.15s, transform 0.05s;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 .btn:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 .btn-primary {
-  background: var(--color-glow);
-  color: #171001;
+  background: var(--color-accent);
+  color: #fff;
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-glow-soft);
+  background: var(--color-accent-deep);
 }
-.btn-ghost {
-  border-color: var(--color-seam);
-  color: var(--color-dim);
-  background: transparent;
+.btn-secondary {
+  background: #e9e9ee;
+  color: var(--color-ink);
 }
-.btn-ghost:hover:not(:disabled) {
-  color: var(--color-glow);
-  border-color: var(--color-glow);
+.btn-secondary:hover:not(:disabled) {
+  background: #dfdfe6;
 }
 .btn-danger {
-  border-color: rgba(255, 93, 93, 0.4);
-  color: var(--color-bad);
-  background: transparent;
+  background: rgba(255, 59, 48, 0.1);
+  color: var(--color-bad-deep);
 }
 .btn-danger:hover:not(:disabled) {
-  background: rgba(255, 93, 93, 0.12);
+  background: rgba(255, 59, 48, 0.17);
 }
 
-/* ── 登機證 ───────────────────────────────────────────── */
-.ticket {
-  font-family: var(--font-ticket);
-  background: var(--color-paper);
+/* ── 輸入框 ───────────────────────────────────────── */
+.field-input {
+  width: 100%;
+  background: var(--color-inset);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 0.65rem 0.9rem;
+  font-size: 15px;
   color: var(--color-ink);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
-  position: relative;
+  outline: none;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
-.ticket-stub {
-  background: var(--color-paper-dark);
+.field-input:focus {
+  background: var(--color-card);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
 }
-/* 垂直撕線（桌機：票根在右側） */
-.perf-v {
-  position: relative;
-  border-left: 2px dashed rgba(29, 43, 78, 0.35);
+.field-input::placeholder {
+  color: rgba(133, 134, 141, 0.7);
 }
-.perf-v::before,
-.perf-v::after {
-  content: "";
-  position: absolute;
-  left: -11px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--color-night);
-}
-.perf-v::before { top: -10px; }
-.perf-v::after { bottom: -10px; }
-/* 水平撕線（手機：票根在下方） */
-.perf-h {
-  position: relative;
-  border-top: 2px dashed rgba(29, 43, 78, 0.35);
-}
-.perf-h::before,
-.perf-h::after {
-  content: "";
-  position: absolute;
-  top: -11px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--color-night);
-}
-.perf-h::before { left: -10px; }
-.perf-h::after { right: -10px; }
 
-.barcode {
-  height: 44px;
-  background: repeating-linear-gradient(
-    90deg,
-    var(--color-ink) 0 2px,
-    transparent 2px 4px,
-    var(--color-ink) 4px 7px,
-    transparent 7px 9px,
-    var(--color-ink) 9px 10px,
-    transparent 10px 13px,
-    var(--color-ink) 13px 15px,
-    transparent 15px 16px
-  );
-  opacity: 0.85;
+/* ── 登機證 ───────────────────────────────────────── */
+.ticket {
+  background: var(--color-card);
+  border-radius: 22px;
+  box-shadow: 0 2px 4px rgba(17, 24, 39, 0.05), 0 16px 40px rgba(17, 24, 39, 0.1);
+  overflow: hidden;
+  position: relative;
 }
+/* 撕線：虛線＋兩側半圓缺口（缺口顏色＝頁面底色） */
+.perf {
+  position: relative;
+  border-top: 2px dashed var(--color-line);
+}
+.perf::before,
+.perf::after {
+  content: "";
+  position: absolute;
+  top: -12px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-canvas);
+}
+.perf::before { left: -11px; }
+.perf::after { right: -11px; }
 
 .stamp {
   position: absolute;
-  transform: rotate(-12deg);
-  border: 3px double #b3402e;
-  border-radius: 10px;
-  padding: 0.35rem 1rem;
+  transform: rotate(-8deg);
+  border: 3px double var(--color-ok-deep);
+  border-radius: 12px;
+  padding: 0.4rem 1.1rem;
   font-weight: 700;
-  letter-spacing: 0.22em;
-  color: #b3402e;
-  background: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.08em;
+  color: var(--color-ok-deep);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(2px);
   text-align: center;
   pointer-events: none;
 }
 
 .ticket-in {
-  animation: printout 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+  animation: printout 0.6s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
 }
 @keyframes printout {
   from {
-    transform: translateY(-26px);
+    transform: translateY(-22px);
     opacity: 0;
   }
 }
 
-/* ── 座位圖 ───────────────────────────────────────────── */
+/* ── 座位圖 ───────────────────────────────────────── */
 .seat-free {
-  fill: rgba(255, 179, 0, 0.08);
-  stroke: var(--color-glow);
+  fill: #ffffff;
+  stroke: #c9c9d1;
   cursor: pointer;
 }
 g:hover > .seat-free {
-  fill: rgba(255, 179, 0, 0.3);
+  fill: rgba(0, 122, 255, 0.1);
+  stroke: var(--color-accent);
 }
 .seat-taken {
-  fill: #151b29;
-  stroke: #2a3450;
+  fill: #e7e7ec;
+  stroke: #e0e0e6;
 }
 .seat-selected {
-  fill: var(--color-glow);
-  stroke: var(--color-glow-soft);
+  fill: var(--color-accent);
+  stroke: var(--color-accent);
 }
 
-/* ── 列印登機證 ──────────────────────────────────────── */
+/* ── 列印登機證 ──────────────────────────────────── */
 @media print {
   body {
     background: #fff !important;
@@ -261,11 +210,8 @@ g:hover > .seat-free {
   .no-print {
     display: none !important;
   }
-  .scanlines::before {
-    display: none;
-  }
   .ticket {
     box-shadow: none;
-    border: 1px solid #bbb;
+    border: 1px solid #ddd;
   }
 }

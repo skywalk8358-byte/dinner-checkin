@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { BoardHeader, BoardShell, NotFoundBoard } from "@/components/Chrome";
-import { Flap } from "@/components/SplitFlap";
+import { BoardHeader, BoardShell, Loading, NotFoundBoard } from "@/components/Chrome";
 import { StepBar, writePending } from "@/components/StepBar";
 import { useNow } from "@/lib/client";
 import { addAttendee, confirmedOf, flightByCode, useDB, useHydrated } from "@/lib/store";
@@ -29,7 +28,7 @@ export default function CheckinPage() {
     return (
       <BoardShell>
         <BoardHeader />
-        <div className="text-dim py-16 text-center text-xs tracking-[0.35em]">LOADING…</div>
+        <Loading />
       </BoardShell>
     );
   }
@@ -50,9 +49,9 @@ export default function CheckinPage() {
       <BoardShell>
         <BoardHeader />
         <NotFoundBoard
-          message={phase === "closed" ? "此航班已截止報名。" : "此航班已開席，無法再報名。"}
+          message={phase === "closed" ? "此活動已截止報名。" : "此活動已開席，無法再報名。"}
           backHref={`/flight/${flight.code}`}
-          backLabel="返回航班頁"
+          backLabel="返回活動頁"
         />
       </BoardShell>
     );
@@ -78,24 +77,22 @@ export default function CheckinPage() {
 
   return (
     <BoardShell>
-      <BoardHeader sub={`CHECK-IN COUNTER · ${flight.code} ${flight.title}`} />
+      <BoardHeader sub={`${flight.code} ${flight.title}`} />
       <StepBar current={1} standby={isStandby} />
 
-      <div className="panel mx-auto max-w-2xl p-5 sm:p-8">
-        <div className="mb-6 flex items-baseline justify-between gap-3">
-          <Flap text="CHECK-IN" className="text-xl font-bold" />
-          <span className="text-dim text-xs tracking-[0.3em]">報到櫃檯 · 請填寫旅客資料</span>
-        </div>
+      <div className="card p-6">
+        <h1 className="text-[22px] font-bold tracking-tight">旅客資料</h1>
+        <p className="text-sub mt-1 text-[13px]">填好資料就能選位、領登機證</p>
 
         {isStandby && (
-          <p className="text-warn mb-5 rounded-lg border border-warn/40 bg-warn/10 px-4 py-3 text-sm leading-relaxed">
-            本航班座位已滿——你仍可加入候補（STANDBY），有人取消時主辦人會依序遞補。
+          <p className="tint tint-warn mt-4">
+            本活動座位已滿——你仍可加入候補，有人取消時主辦人會依序遞補。
           </p>
         )}
 
-        <form onSubmit={submit} className="flex flex-col gap-5">
+        <form onSubmit={submit} className="mt-6 flex flex-col gap-5">
           <label className="block">
-            <span className="text-dim mb-1.5 block text-xs tracking-[0.25em]">PASSENGER NAME · 姓名 *</span>
+            <span className="text-sub mb-1.5 block text-[13px] font-medium">姓名 *</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -108,7 +105,7 @@ export default function CheckinPage() {
           </label>
 
           <label className="block">
-            <span className="text-dim mb-1.5 block text-xs tracking-[0.25em]">DEPARTMENT · 部門 / 單位</span>
+            <span className="text-sub mb-1.5 block text-[13px] font-medium">部門 / 單位</span>
             <input
               value={dept}
               onChange={(e) => setDept(e.target.value)}
@@ -119,27 +116,26 @@ export default function CheckinPage() {
           </label>
 
           <div>
-            <span className="text-dim mb-1.5 block text-xs tracking-[0.25em]">MEAL PREFERENCE · 餐點選擇</span>
+            <span className="text-sub mb-1.5 block text-[13px] font-medium">餐點選擇</span>
             <div className="grid grid-cols-3 gap-2">
               {(Object.keys(MEAL_LABEL) as Meal[]).map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setMeal(m)}
-                  className={`rounded-lg border px-3 py-2.5 text-center transition ${
-                    meal === m ? "border-glow bg-glow/15 text-glow" : "border-seam text-dim hover:border-glow/50"
+                  className={`rounded-xl px-3 py-2.5 text-center text-[14px] font-semibold transition ${
+                    meal === m ? "bg-accent text-white" : "bg-inset text-ink hover:bg-[#e4e4ea]"
                   }`}
                 >
-                  <div className="text-sm font-semibold">{MEAL_LABEL[m].zh}</div>
-                  <div className="mt-0.5 text-[10px] tracking-[0.15em]">{MEAL_LABEL[m].en}</div>
+                  {MEAL_LABEL[m].zh}
                 </button>
               ))}
             </div>
           </div>
 
           <label className="block">
-            <span className="text-dim mb-1.5 block text-xs tracking-[0.25em]">
-              DIETARY NOTES · 忌口 / 備註{meal === "special" ? " *" : ""}
+            <span className="text-sub mb-1.5 block text-[13px] font-medium">
+              忌口 / 備註{meal === "special" ? " *" : ""}
             </span>
             <input
               value={mealNote}
@@ -151,11 +147,11 @@ export default function CheckinPage() {
             />
           </label>
 
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <button type="submit" disabled={!name.trim() || submitting} className="btn btn-primary">
+          <div className="mt-1 flex flex-col gap-2.5">
+            <button type="submit" disabled={!name.trim() || submitting} className="btn btn-primary w-full text-[16px]">
               {isStandby ? "JOIN STANDBY · 加入候補" : "NEXT · 前往選位 →"}
             </button>
-            <Link href={`/flight/${flight.code}`} className="btn btn-ghost text-sm">
+            <Link href={`/flight/${flight.code}`} className="btn btn-secondary w-full text-[14px]">
               ← 返回
             </Link>
           </div>

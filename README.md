@@ -1,8 +1,9 @@
-# ✈ DINNER AIR — 聚餐報名系統
+# ✈ Dinner Air — 聚餐報名系統
 
-把公司／社團聚餐包裝成一趟航班的報名系統：**航班看板 → 櫃檯報名 → 圓桌選位 → 領登機證 → 當天 QR 掃描登機**。
+把公司／社團聚餐包裝成一趟航班的報名系統：**航班列表 → 櫃檯報名 → 圓桌選位 → 領登機證 → 當天 QR 掃描登機**。
+視覺走 **Apple Wallet 票卡風**：亮色、大留白、卡片式、系統字體。
 
-| 出發看板 | 登機證 |
+| 航班列表 | 登機證 |
 |---|---|
 | ![departures](docs/screenshots/01-departures.png) | ![boarding pass](docs/screenshots/05-boarding-pass.png) |
 
@@ -45,7 +46,7 @@ npm run smoke                      # Playwright 跑完整報名流程並截圖�
 
 | 路徑 | 說明 |
 |---|---|
-| `/` | 出發航班看板（翻牌動畫） |
+| `/` | 航班（活動）列表 |
 | `/flight/[code]` | 航班資訊＋CHECK IN 入口 |
 | `/flight/[code]/checkin` | 報到櫃檯：姓名、部門、餐點、忌口 |
 | `/flight/[code]/seat` | 圓桌選位圖（`?pass=<token>` 可為已報名者補選位） |
@@ -56,14 +57,14 @@ npm run smoke                      # Playwright 跑完整報名流程並截圖�
 
 ## 架構（Phase 1：前端原型）
 
-- **Next.js 16（App Router）＋ Tailwind CSS v4**，字體用 `@fontsource`（IBM Plex Mono／Barlow Condensed）
+- **Next.js 16（App Router）＋ Tailwind CSS v4**，系統字體（SF Pro／PingFang／Noto Sans TC），設計 token 集中在 `globals.css` 的 `@theme`
 - **資料層 `src/lib/store.ts`**：目前存瀏覽器 localStorage（跨分頁即時同步），**所有 UI 只透過這個模組的 API 存取資料**
 - QR 產生 `react-qr-code`、掃描 `qr-scanner`（登機口相機需 HTTPS 或 localhost）
 
 ```
 src/
-  lib/        types.ts（資料模型）· seed.ts（示範資料）· store.ts（mock 資料層）· format.ts
-  components/ SplitFlap · Clock · Chrome · StepBar · BoardingPass · SeatMap · QrScan · AdminGate
+  lib/        types.ts（資料模型）· seed.ts（示範資料）· store.ts（mock 資料層）· client.ts · format.ts
+  components/ Chrome · StepBar · BoardingPass · SeatMap · QrScan · AdminGate
   app/        （頁面，見上表）
 ```
 

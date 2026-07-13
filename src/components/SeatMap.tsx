@@ -32,12 +32,14 @@ function Dot({ cls }: { cls: string }) {
 
 export function SeatLegend() {
   return (
-    <div className="text-dim flex flex-wrap items-center gap-x-5 gap-y-2 text-xs tracking-wider">
+    <div className="text-sub flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
       <span className="flex items-center gap-1.5"><Dot cls="seat-free" /> 可選</span>
       <span className="flex items-center gap-1.5"><Dot cls="seat-taken" /> 已有人</span>
       <span className="flex items-center gap-1.5"><Dot cls="seat-selected" /> 你的選擇</span>
       <span className="flex items-center gap-1.5">
-        <svg viewBox="0 0 24 24" className="h-5 w-5"><circle cx="12" cy="12" r="9" fill="none" stroke="#d4af37" strokeWidth="2" /></svg>
+        <svg viewBox="0 0 24 24" className="h-5 w-5">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="#b8892e" strokeWidth="2" />
+        </svg>
         VIP 主桌
       </span>
     </div>
@@ -57,24 +59,24 @@ function TableDisc({ table, taken, selected, onSelect }: {
   const takenCount = codes.filter((c) => taken.has(c)).length;
 
   return (
-    <div className="panel p-3">
+    <div className="card p-3">
       <svg viewBox="0 0 220 220" className="w-full select-none">
         <circle
           cx={cx}
           cy={cy}
           r={52}
-          fill="#0e1526"
-          stroke={table.vip ? "#d4af37" : "#223048"}
+          fill="#fafafc"
+          stroke={table.vip ? "#b8892e" : "#d9d9e0"}
           strokeWidth={table.vip ? 2.5 : 1.5}
         />
-        <text x={cx} y={98} textAnchor="middle" fill={table.vip ? "#d4af37" : "#64719a"} fontSize="11" letterSpacing="3">
+        <text x={cx} y={98} textAnchor="middle" fill={table.vip ? "#b8892e" : "#85868d"} fontSize="11" letterSpacing="2">
           TABLE
         </text>
-        <text x={cx} y={124} textAnchor="middle" fill={table.vip ? "#d4af37" : "#ffb300"} fontSize="24" fontWeight="700">
+        <text x={cx} y={124} textAnchor="middle" fill={table.vip ? "#b8892e" : "#17181c"} fontSize="24" fontWeight="700">
           {table.label}
         </text>
         {table.vip && (
-          <text x={cx} y={142} textAnchor="middle" fill="#d4af37" fontSize="10" letterSpacing="4">
+          <text x={cx} y={142} textAnchor="middle" fill="#b8892e" fontSize="10" letterSpacing="3">
             VIP
           </text>
         )}
@@ -101,7 +103,7 @@ function TableDisc({ table, taken, selected, onSelect }: {
                 textAnchor="middle"
                 fontSize="12"
                 fontWeight="600"
-                fill={isSelected ? "#171001" : isTaken ? "#3d4763" : "#ffb300"}
+                fill={isSelected ? "#ffffff" : isTaken ? "#ababb2" : "#17181c"}
                 style={{ pointerEvents: "none" }}
               >
                 {SEAT_LETTERS[i]}
@@ -110,7 +112,7 @@ function TableDisc({ table, taken, selected, onSelect }: {
           );
         })}
       </svg>
-      <div className="text-dim mt-1 flex justify-between px-1 text-[11px] tracking-widest">
+      <div className="text-sub mt-1 flex justify-between px-1 text-[12px]">
         <span>第 {table.label} 桌{table.vip ? " · VIP" : ""}</span>
         <span>
           {takenCount}/{table.seats}

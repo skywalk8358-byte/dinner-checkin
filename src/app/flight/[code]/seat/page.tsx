@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BoardHeader, BoardShell, NotFoundBoard } from "@/components/Chrome";
+import { BoardHeader, BoardShell, Loading, NotFoundBoard } from "@/components/Chrome";
 import { SeatLegend, SeatMap } from "@/components/SeatMap";
-import { Flap } from "@/components/SplitFlap";
 import { clearPending, StepBar, usePendingSignup } from "@/components/StepBar";
 import { useHydrated } from "@/lib/client";
 import { addAttendee, assignSeat, byToken, flightByCode, takenSeats, useDB } from "@/lib/store";
@@ -40,7 +39,7 @@ export default function SeatPage() {
     return (
       <BoardShell wide>
         <BoardHeader />
-        <div className="text-dim py-16 text-center text-xs tracking-[0.35em]">LOADING…</div>
+        <Loading />
       </BoardShell>
     );
   }
@@ -60,9 +59,9 @@ export default function SeatPage() {
       <BoardShell>
         <BoardHeader />
         <NotFoundBoard
-          message="這張登機證無法在此航班選位（可能是候補票或已取消）。"
+          message="這張登機證無法在此活動選位（可能是候補票或已取消）。"
           backHref={`/flight/${flight.code}`}
-          backLabel="返回航班頁"
+          backLabel="返回活動頁"
         />
       </BoardShell>
     );
@@ -100,22 +99,20 @@ export default function SeatPage() {
 
   return (
     <BoardShell wide>
-      <BoardHeader sub={`SEAT SELECTION · ${flight.code} ${flight.title}`} />
+      <BoardHeader sub={`${flight.code} ${flight.title}`} />
       {pending && <StepBar current={2} />}
 
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <Flap text="SELECT YOUR SEAT" className="text-xl font-bold" />
-          <p className="text-dim mt-1 text-xs tracking-[0.25em]">
-            {passengerName} · 請點選座位（桌號＋字母，例如 3F＝第 3 桌 F 位）
+          <h1 className="text-[22px] font-bold tracking-tight">選擇座位</h1>
+          <p className="text-sub mt-1 text-[13px]">
+            {passengerName} · 點選座位（桌號＋字母，例如 3F＝第 3 桌 F 位）
           </p>
         </div>
         <SeatLegend />
       </div>
 
-      {error && (
-        <p className="text-bad mb-4 rounded-lg border border-bad/40 bg-bad/10 px-4 py-3 text-sm">{error}</p>
-      )}
+      {error && <p className="tint tint-bad mb-4">{error}</p>}
 
       <SeatMap
         flight={flight}
@@ -129,15 +126,15 @@ export default function SeatPage() {
 
       {/* 底部確認列 */}
       <div className="sticky bottom-3 mt-6">
-        <div className="panel flex flex-wrap items-center justify-between gap-3 px-5 py-4 shadow-2xl">
-          <div className="flex items-center gap-3">
-            <span className="text-dim text-xs tracking-[0.3em]">SEAT 座位</span>
-            <Flap text={selected ?? "--"} className="text-2xl font-bold" />
+        <div className="card flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
+          <div className="flex items-baseline gap-2.5">
+            <span className="text-sub text-[13px] font-medium">座位</span>
+            <span className="text-accent text-[24px] font-extrabold tabular-nums">{selected ?? "—"}</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <Link
               href={pending ? `/flight/${flight.code}/checkin` : `/pass/${reseatToken}`}
-              className="btn btn-ghost text-sm"
+              className="btn btn-secondary text-[14px]"
             >
               ← 上一步
             </Link>

@@ -34,20 +34,20 @@ export function QrScan({ active, onScan }: { active: boolean; onScan: (text: str
 
   if (!active) {
     return (
-      <div className="panel flex aspect-video items-center justify-center">
-        <span className="text-dim text-xs tracking-[0.35em]">CAMERA STANDBY · 相機待命</span>
+      <div className="card flex aspect-video items-center justify-center">
+        <span className="text-sub text-[14px]">📷 相機待命中</span>
       </div>
     );
   }
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-seam bg-black">
+    <div className="relative overflow-hidden rounded-[20px] bg-black">
       <video ref={videoRef} className="aspect-video w-full object-cover" muted playsInline />
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-night/85 p-4 text-center text-xs leading-relaxed text-bad">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-4 text-center text-[13px] leading-relaxed text-white">
           相機無法啟動（{error}）。
           <br />
-          請確認瀏覽器的相機權限，或改用下方名單手動報到。
+          請確認瀏覽器的相機權限，或改用旁邊的名單手動報到。
         </div>
       )}
     </div>

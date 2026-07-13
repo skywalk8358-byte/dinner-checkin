@@ -62,15 +62,19 @@ export function usePendingSignup(flightCode?: string): PendingSignup | null {
 
 function Step({ n, label, active, done }: { n: number; label: string; active: boolean; done?: boolean }) {
   return (
-    <div className={`flex items-center gap-2 ${active ? "text-glow" : done ? "text-ok" : "text-dim"}`}>
+    <div className={`flex items-center gap-2 ${active ? "text-ink" : done ? "text-ok-deep" : "text-sub"}`}>
       <span
-        className={`flex h-6 w-6 items-center justify-center rounded-full border text-xs font-bold ${
-          active ? "border-glow bg-glow text-night" : done ? "border-ok" : "border-seam"
+        className={`flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold ${
+          active
+            ? "bg-accent text-white"
+            : done
+              ? "bg-[rgba(52,199,89,0.15)] text-ok-deep"
+              : "bg-inset text-sub"
         }`}
       >
         {done ? "✓" : n}
       </span>
-      <span className="text-xs tracking-[0.2em]">{label}</span>
+      <span className="text-[13px] font-medium">{label}</span>
     </div>
   );
 }
@@ -78,11 +82,11 @@ function Step({ n, label, active, done }: { n: number; label: string; active: bo
 /** 報名三步驟指示條：旅客資料 → 選位 → 登機證 */
 export function StepBar({ current, standby = false }: { current: 1 | 2 | 3; standby?: boolean }) {
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2">
+    <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
       <Step n={1} label="旅客資料" active={current === 1} done={current > 1} />
-      <span className="text-dim">—</span>
+      <span className="text-line">·</span>
       <Step n={2} label={standby ? "選位（候補略過）" : "選擇座位"} active={current === 2} done={current > 2} />
-      <span className="text-dim">—</span>
+      <span className="text-line">·</span>
       <Step n={3} label="領取登機證" active={current === 3} />
     </div>
   );
