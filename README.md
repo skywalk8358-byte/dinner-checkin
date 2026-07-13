@@ -3,6 +3,8 @@
 把公司／社團聚餐包裝成一趟航班的報名系統：**航班列表 → 櫃檯報名 → 圓桌選位 → 領登機證 → 當天 QR 掃描登機**。
 視覺走 **Apple Wallet 票卡風**：亮色、大留白、卡片式、系統字體。
 
+**🔗 線上 Demo：https://skywalk8358-byte.github.io/dinner-checkin/**（單檔打包版，資料存於各自瀏覽器）
+
 | 航班列表 | 登機證 |
 |---|---|
 | ![departures](docs/screenshots/01-departures.png) | ![boarding pass](docs/screenshots/05-boarding-pass.png) |
