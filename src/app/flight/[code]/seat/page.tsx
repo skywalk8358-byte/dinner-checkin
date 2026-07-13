@@ -26,6 +26,8 @@ export default function SeatPage() {
 
   const [selected, setSelected] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
+  // 點擊已入座的座位 → 顯示是誰（姓名＋產業）
+  const [peek, setPeek] = useState<{ code: string; name: string; industry?: string } | null>(null);
   // 完成選位後 pending 會被清掉，用這個旗標避免被誤判成「沒報名」而踢回櫃檯
   const [done, setDone] = useState(false);
 
@@ -106,13 +108,24 @@ export default function SeatPage() {
         <div>
           <h1 className="text-[22px] font-bold tracking-tight">選擇座位</h1>
           <p className="text-sub mt-1 text-[13px]">
-            {passengerName} · 點選座位（桌號＋字母，例如 3F＝第 3 桌 F 位）
+            {passengerName} · 點空位入座；點已入座的位子可以看看是誰
           </p>
         </div>
         <SeatLegend />
       </div>
 
       {error && <p className="tint tint-bad mb-4">{error}</p>}
+      {peek && (
+        <div className="tint tint-accent mb-4 flex items-center justify-between gap-3">
+          <span>
+            <span className="font-semibold">{peek.code}</span> · {peek.name}
+            {peek.industry && <span className="opacity-75">（{peek.industry}）</span>}
+          </span>
+          <button onClick={() => setPeek(null)} className="shrink-0 text-[13px] font-semibold opacity-60 hover:opacity-100">
+            ✕
+          </button>
+        </div>
+      )}
 
       <SeatMap
         flight={flight}
@@ -122,6 +135,7 @@ export default function SeatPage() {
           setSelected(s);
           setError(null);
         }}
+        onPeek={(code, attendee) => setPeek({ code, name: attendee.name, industry: attendee.industry })}
       />
 
       {/* 底部確認列 */}
