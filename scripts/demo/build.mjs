@@ -55,3 +55,23 @@ const html = `<title>Dinner Air — 聚餐報名 Demo</title>
 const outFile = resolve(outDir, "dinner-air-demo.html");
 writeFileSync(outFile, html);
 console.log(`✓ ${outFile} (${Math.round(html.length / 1024)} KB)`);
+
+// 同步一份到 docs/index.html —— GitHub Pages（Deploy from branch → /docs）直接對外服務
+const pagesFile = resolve(root, "docs/index.html");
+const pagesHtml = `<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f2f2f7">
+<title>Dinner Air ✈ 聚餐報名</title>
+<style>${css}</style>
+</head>
+<body class="antialiased">
+<div id="root"></div>
+<script>${js}</script>
+</body>
+</html>
+`;
+writeFileSync(pagesFile, pagesHtml);
+console.log(`✓ ${pagesFile} (${Math.round(pagesHtml.length / 1024)} KB)`);
