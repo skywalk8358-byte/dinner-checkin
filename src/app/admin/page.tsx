@@ -40,6 +40,7 @@ function CreateFlightForm() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [departLocal, setDepartLocal] = useState(defaultDepart);
+  const [endLocal, setEndLocal] = useState("");
   const [code, setCode] = useState(() => codeFromDate(defaultDepart()));
   const [codeTouched, setCodeTouched] = useState(false);
   const [venueName, setVenueName] = useState("");
@@ -69,10 +70,16 @@ function CreateFlightForm() {
       setError("請選擇有效的日期時間。");
       return;
     }
+    const end = endLocal ? new Date(endLocal) : null;
+    if (end && (isNaN(end.getTime()) || end <= depart)) {
+      setError("結束時間需要晚於開始時間。");
+      return;
+    }
     const flight = createFlight({
       code: code.trim(),
       title: title.trim(),
       departAt: depart.toISOString(),
+      endAt: end ? end.toISOString() : undefined,
       boardingMinutes,
       origin: origin.trim() || "OFFICE",
       venueName: venueName.trim(),
@@ -129,6 +136,16 @@ function CreateFlightForm() {
               required
             />
           </label>
+          <label className="block">
+            <L>結束時間（選填）</L>
+            <input
+              type="datetime-local"
+              value={endLocal}
+              onChange={(e) => setEndLocal(e.target.value)}
+              className="field-input"
+            />
+          </label>
+
           <label className="block">
             <L>活動代號 *</L>
             <input

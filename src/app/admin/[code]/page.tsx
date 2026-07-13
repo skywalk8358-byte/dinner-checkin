@@ -18,7 +18,7 @@ import {
   useHydrated,
 } from "@/lib/store";
 import type { Attendee, Flight } from "@/lib/types";
-import { flightCapacity, MEAL_LABEL, splitSeat } from "@/lib/types";
+import { flightCapacity, splitSeat } from "@/lib/types";
 
 function seatCompare(a?: string, b?: string): number {
   if (!a && !b) return 0;
@@ -43,13 +43,12 @@ function StatTile({ label, value, tone = "" }: { label: string; value: string; t
 function exportCsv(flight: Flight, attendees: Attendee[]) {
   const esc = (v: string) => `"${v.replaceAll('"', '""')}"`;
   const rows = [
-    ["姓名", "部門", "座位", "餐點", "忌口備註", "狀態", "已報到", "報到時間", "票號", "報名時間"],
+    ["姓名", "產業", "座位", "備註", "狀態", "已報到", "報到時間", "票號", "報名時間"],
     ...attendees.map((a) => [
       a.name,
-      a.dept ?? "",
+      a.industry ?? "",
       a.seat ?? "",
-      MEAL_LABEL[a.meal].zh,
-      a.mealNote ?? "",
+      a.note ?? "",
       a.status === "confirmed" ? "確認" : "候補",
       a.checkedInAt ? "是" : "否",
       a.checkedInAt ? `${fmtDate(a.checkedInAt)} ${fmtTime(a.checkedInAt)}` : "",
@@ -90,7 +89,6 @@ export default function ManifestPage() {
             const boarded = confirmed.filter((a) => a.checkedInAt).length;
             const cap = flightCapacity(flight);
             const hasSpace = confirmed.length < cap;
-            const mealCount = (key: Attendee["meal"]) => confirmed.filter((a) => a.meal === key).length;
 
             const copySignup = async () => {
               try {
@@ -111,16 +109,12 @@ export default function ManifestPage() {
                 <div className="min-w-0">
                   <div className="truncate text-[14px] font-semibold">
                     {a.name}
-                    {a.dept && <span className="text-sub ml-2 text-[12px] font-normal">{a.dept}</span>}
+                    {a.industry && <span className="text-sub ml-2 text-[12px] font-normal">{a.industry}</span>}
                   </div>
-                  <div className="text-sub text-[12px] sm:hidden">
-                    {MEAL_LABEL[a.meal].zh}
-                    {a.mealNote && ` · ${a.mealNote}`}
-                  </div>
+                  {a.note && <div className="text-warn-deep truncate text-[12px] sm:hidden">{a.note}</div>}
                 </div>
-                <div className="text-sub hidden min-w-0 truncate text-[13px] sm:block">
-                  {MEAL_LABEL[a.meal].zh}
-                  {a.mealNote && <span className="text-warn-deep ml-1">({a.mealNote})</span>}
+                <div className="hidden min-w-0 truncate text-[13px] sm:block">
+                  {a.note ? <span className="text-warn-deep">{a.note}</span> : <span className="text-sub">—</span>}
                 </div>
                 <div className="hidden text-[13px] sm:block">
                   {a.checkedInAt ? (
@@ -186,7 +180,7 @@ export default function ManifestPage() {
                     value={`${boarded} (${confirmed.length ? Math.round((boarded / confirmed.length) * 100) : 0}%)`}
                     tone="text-ok-deep"
                   />
-                  <StatTile label="葷 / 素 / 特殊" value={`${mealCount("standard")} / ${mealCount("veg")} / ${mealCount("special")}`} />
+                  <StatTile label="剩餘座位" value={String(Math.max(0, cap - confirmed.length))} />
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">

@@ -7,9 +7,8 @@ const pendingKey = (flightCode: string) => `dinner-checkin:pending:${flightCode}
 
 export interface PendingSignup {
   name: string;
-  dept: string;
-  meal: "standard" | "veg" | "special";
-  mealNote: string;
+  industry: string;
+  note: string;
 }
 
 // 「填完資料、還沒選位」的暫存，包成小 external store 讓頁面能純粹地讀

@@ -4,7 +4,7 @@ import QRCode from "react-qr-code";
 import { useOrigin } from "@/lib/client";
 import { fmtDateShort, fmtTime } from "@/lib/format";
 import type { Attendee, Flight } from "@/lib/types";
-import { MEAL_LABEL, splitSeat } from "@/lib/types";
+import { splitSeat } from "@/lib/types";
 
 function Field({ label, value, className = "" }: {
   label: string;
@@ -72,7 +72,9 @@ export function BoardingPass({ flight, attendee, animate = false }: {
             value={
               <>
                 {attendee.name}
-                {attendee.dept && <span className="text-sub ml-1.5 text-[13px] font-normal">{attendee.dept}</span>}
+                {attendee.industry && (
+                  <span className="text-sub ml-1.5 text-[13px] font-normal">{attendee.industry}</span>
+                )}
               </>
             }
             className="col-span-2"
@@ -85,7 +87,7 @@ export function BoardingPass({ flight, attendee, animate = false }: {
           <Field label="入場 BOARDING" value={fmtTime(boardingAt)} />
           <Field label="開席 DEPARTS" value={fmtTime(flight.departAt)} />
           <Field label="登機門 GATE" value={flight.gate} className="col-span-2" />
-          <Field label="餐點 MEAL" value={MEAL_LABEL[attendee.meal].zh} />
+          <Field label="航班 FLIGHT" value={flight.code} />
         </div>
 
         {attendee.checkedInAt && (

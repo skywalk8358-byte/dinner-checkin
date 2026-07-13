@@ -9,12 +9,13 @@
 
 import { useSyncExternalStore } from "react";
 import { seedDB } from "./seed";
-import type { Attendee, DB, Flight, Meal } from "./types";
+import type { Attendee, DB, Flight } from "./types";
 import { flightCapacity } from "./types";
 
 export { useHydrated } from "./client";
 
-const LS_KEY = "dinner-checkin:v1";
+// v2：欄位改版（dept/meal → industry/note），換 key 讓舊快取自動重播種子
+const LS_KEY = "dinner-checkin:v2";
 const EMPTY_DB: DB = { flights: [], attendees: [] };
 
 let state: DB = load();
@@ -113,6 +114,7 @@ export interface NewFlight {
   code: string;
   title: string;
   departAt: string;
+  endAt?: string;
   boardingMinutes: number;
   origin: string;
   venueName: string;
@@ -130,6 +132,7 @@ export function createFlight(input: NewFlight): Flight {
     code: input.code.toUpperCase(),
     title: input.title,
     departAt: input.departAt,
+    endAt: input.endAt,
     boardingMinutes: input.boardingMinutes,
     origin: input.origin || "OFFICE",
     venueName: input.venueName,
@@ -158,9 +161,8 @@ export function setFlightStatus(flightId: string, status: Flight["status"]) {
 export interface NewAttendee {
   flightId: string;
   name: string;
-  dept?: string;
-  meal: Meal;
-  mealNote?: string;
+  industry?: string;
+  note?: string;
   seat?: string;
 }
 
@@ -189,9 +191,8 @@ export function addAttendee(input: NewAttendee): SignupResult {
     id: crypto.randomUUID(),
     flightId: flight.id,
     name: input.name.trim(),
-    dept: input.dept?.trim() || undefined,
-    meal: input.meal,
-    mealNote: input.mealNote?.trim() || undefined,
+    industry: input.industry?.trim() || undefined,
+    note: input.note?.trim() || undefined,
     seat,
     status,
     passToken: genToken(flight.code),

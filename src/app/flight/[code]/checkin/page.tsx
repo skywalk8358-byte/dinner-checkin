@@ -7,8 +7,7 @@ import { BoardHeader, BoardShell, Loading, NotFoundBoard } from "@/components/Ch
 import { StepBar, writePending } from "@/components/StepBar";
 import { useNow } from "@/lib/client";
 import { addAttendee, confirmedOf, flightByCode, useDB, useHydrated } from "@/lib/store";
-import type { Meal } from "@/lib/types";
-import { flightPhase, MEAL_LABEL } from "@/lib/types";
+import { flightPhase } from "@/lib/types";
 
 /** 報名表單（報到櫃檯） */
 export default function CheckinPage() {
@@ -19,9 +18,8 @@ export default function CheckinPage() {
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [dept, setDept] = useState("");
-  const [meal, setMeal] = useState<Meal>("standard");
-  const [mealNote, setMealNote] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   if (!hydrated) {
@@ -65,13 +63,13 @@ export default function CheckinPage() {
     if (isStandby) {
       // 已滿：直接建立候補，不經過選位
       setSubmitting(true);
-      const res = addAttendee({ flightId: flight.id, name, dept, meal, mealNote });
+      const res = addAttendee({ flightId: flight.id, name, industry, note });
       if (res.ok) router.push(`/pass/${res.attendee.passToken}?new=1`);
       else setSubmitting(false);
       return;
     }
 
-    writePending(flight.code, { name: name.trim(), dept: dept.trim(), meal, mealNote: mealNote.trim() });
+    writePending(flight.code, { name: name.trim(), industry: industry.trim(), note: note.trim() });
     router.push(`/flight/${flight.code}/seat`);
   };
 
@@ -105,45 +103,24 @@ export default function CheckinPage() {
           </label>
 
           <label className="block">
-            <span className="text-sub mb-1.5 block text-[13px] font-medium">部門 / 單位</span>
+            <span className="text-sub mb-1.5 block text-[13px] font-medium">產業</span>
             <input
-              value={dept}
-              onChange={(e) => setDept(e.target.value)}
+              value={industry}
+              onChange={(e) => setIndustry(e.target.value)}
               className="field-input"
-              placeholder="研發部"
+              placeholder="例：餐飲、科技、金融"
               maxLength={20}
             />
           </label>
 
-          <div>
-            <span className="text-sub mb-1.5 block text-[13px] font-medium">餐點選擇</span>
-            <div className="grid grid-cols-3 gap-2">
-              {(Object.keys(MEAL_LABEL) as Meal[]).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMeal(m)}
-                  className={`rounded-xl px-3 py-2.5 text-center text-[14px] font-semibold transition ${
-                    meal === m ? "bg-accent text-white" : "bg-inset text-ink hover:bg-[#e4e4ea]"
-                  }`}
-                >
-                  {MEAL_LABEL[m].zh}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <label className="block">
-            <span className="text-sub mb-1.5 block text-[13px] font-medium">
-              忌口 / 備註{meal === "special" ? " *" : ""}
-            </span>
+            <span className="text-sub mb-1.5 block text-[13px] font-medium">備註（忌口、過敏等）</span>
             <input
-              value={mealNote}
-              onChange={(e) => setMealNote(e.target.value)}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
               className="field-input"
               placeholder="例：海鮮過敏、不吃牛"
               maxLength={60}
-              required={meal === "special"}
             />
           </label>
 

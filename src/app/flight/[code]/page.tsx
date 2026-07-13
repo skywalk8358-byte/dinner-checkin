@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { BoardHeader, BoardShell, Loading, NotFoundBoard } from "@/components/Chrome";
 import { useNow } from "@/lib/client";
-import { fmtDate, fmtTime } from "@/lib/format";
+import { fmtDate, fmtTime, fmtTimeRange } from "@/lib/format";
 import { confirmedOf, flightByCode, standbyOf, useDB, useHydrated } from "@/lib/store";
 import { flightCapacity, flightPhase, PHASE_LABEL } from "@/lib/types";
 
@@ -85,7 +85,7 @@ export default function FlightPage() {
         <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-line pt-5 sm:grid-cols-3">
           <Info label="日期" value={fmtDate(flight.departAt)} />
           <Info label="入場" value={fmtTime(boardingAt.toISOString())} />
-          <Info label="開席" value={fmtTime(flight.departAt)} />
+          <Info label={flight.endAt ? "時間" : "開席"} value={fmtTimeRange(flight.departAt, flight.endAt)} />
           <Info label="登機門" value={flight.gate} />
           <Info
             label="剩餘座位"
@@ -96,10 +96,9 @@ export default function FlightPage() {
               </>
             }
           />
-          <Info label="餐點" value="標準 / 素食 / 特殊" />
         </div>
 
-        {flight.notes && <p className="tint tint-accent mt-5">{flight.notes}</p>}
+        {flight.notes && <p className="tint tint-accent mt-5 whitespace-pre-line">{flight.notes}</p>}
 
         <div className="mt-6 flex flex-col gap-2.5">
           {canCheckin && (

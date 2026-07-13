@@ -27,6 +27,15 @@ export function fmtDateEn(iso: string): string {
   return `${pad(d.getDate())} ${MONTHS_EN[d.getMonth()]}`;
 }
 
+/** 20:00 – 24:00（跨到隔天零點顯示成 24:00）；沒有結束時間就只給開始時間 */
+export function fmtTimeRange(startIso: string, endIso?: string): string {
+  const start = fmtTime(startIso);
+  if (!endIso) return start;
+  let end = fmtTime(endIso);
+  if (end === "00:00") end = "24:00";
+  return `${start} – ${end}`;
+}
+
 /** 2026-08-08T18:30 → <input type="datetime-local"> 用 */
 export function toLocalInput(iso: string): string {
   const d = new Date(iso);

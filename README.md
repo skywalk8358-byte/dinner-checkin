@@ -18,7 +18,7 @@
 | 航班編號 `DN-0808` | 一場聚餐活動 |
 | 出發時間 / 登機時間 | 開席時間 / 建議入場時間 |
 | 目的地・登機門 | 餐廳・樓層/包廂 |
-| 機上選餐 | 標準餐 / 素食 / 特殊需求（忌口） |
+| 艙等 | 一般席 / VIP 主桌 |
 | 座位 `3F` | 第 3 桌 F 位（桌號＋字母，跳過 I/O） |
 | 登機證＋QR | 報名成功憑證，當天入場出示 |
 | 登機 Boarding | 當天報到（掃 QR 或名單勾選） |
@@ -31,7 +31,7 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-- **示範登機證**：`/pass/DN0808-DEMO01`
+- **示範登機證**：`/pass/DN0812-DEMO01`
 - **主辦人後台**：`/admin`，示範通關碼 `0815`（可用環境變數 `NEXT_PUBLIC_ADMIN_CODE` 更換）
 - **重置示範資料**：後台最下方 RESET DEMO DATA
 
@@ -48,7 +48,7 @@ npm run smoke                      # Playwright 跑完整報名流程並截圖�
 |---|---|
 | `/` | 航班（活動）列表 |
 | `/flight/[code]` | 航班資訊＋CHECK IN 入口 |
-| `/flight/[code]/checkin` | 報到櫃檯：姓名、部門、餐點、忌口 |
+| `/flight/[code]/checkin` | 報到櫃檯：姓名、產業、備註（忌口） |
 | `/flight/[code]/seat` | 圓桌選位圖（`?pass=<token>` 可為已報名者補選位） |
 | `/pass/[token]` | 個人登機證：QR、列印、已登機蓋章 |
 | `/admin` | 航務後台：開航班（桌數×每桌座位、VIP 主桌）、截止/重開 |
@@ -71,9 +71,9 @@ src/
 ### 資料模型
 
 ```ts
-Flight   { id, code, title, departAt, boardingMinutes, origin,
+Flight   { id, code, title, departAt, endAt?, boardingMinutes, origin,
            venueName, venueAddress, gate, tables: {label, seats, vip?}[], status, notes }
-Attendee { id, flightId, name, dept?, meal, mealNote?, seat?,
+Attendee { id, flightId, name, industry?, note?, seat?,
            status: confirmed|standby|cancelled, checkedInAt?, passToken }
 ```
 

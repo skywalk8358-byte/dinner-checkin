@@ -32,12 +32,12 @@ page.on("pageerror", (e) => fail(`page error: ${e.message}`));
 await page.goto(BASE + "/");
 await page.waitForTimeout(2200); // 等翻牌動畫定格
 await page.screenshot({ path: OUT + "01-departures.png", fullPage: true });
-if (!(await page.getByText("DN-0808").first().isVisible())) fail("departures board missing DN-0808");
+if (!(await page.getByText("DN-0812").first().isVisible())) fail("departures board missing DN-0812");
 console.log("✓ departures board");
 
 // 2. 航班頁
-await page.getByText("DN-0808").first().click();
-await page.waitForURL("**/flight/DN-0808");
+await page.getByText("DN-0812").first().click();
+await page.waitForURL("**/flight/DN-0812");
 await page.waitForTimeout(2200);
 await page.screenshot({ path: OUT + "02-flight.png", fullPage: true });
 if (!(await page.getByText("CHECK IN · 開始報名").isVisible())) fail("flight page missing check-in CTA");
@@ -47,8 +47,7 @@ console.log("✓ flight page");
 await page.getByText("CHECK IN · 開始報名").click();
 await page.waitForURL("**/checkin");
 await page.getByPlaceholder("王小明").fill("林小美");
-await page.getByPlaceholder("研發部").fill("設計部");
-await page.getByText("素食餐").click();
+await page.getByPlaceholder("例：餐飲、科技、金融").fill("設計業");
 await page.waitForTimeout(1200);
 await page.screenshot({ path: OUT + "03-checkin-form.png", fullPage: true });
 await page.getByText("NEXT · 前往選位").click();
@@ -83,7 +82,7 @@ await mobile.close();
 console.log("✓ mobile pass");
 
 // 6. 後台（通關碼 0815）→ 乘客名單
-await page.goto(BASE + "/admin/DN-0808");
+await page.goto(BASE + "/admin/DN-0812");
 await page.getByPlaceholder("••••").fill("0815");
 await page.getByText("UNLOCK 解鎖").click();
 await page.waitForTimeout(2000);
@@ -92,7 +91,7 @@ if (!(await page.getByText("林小美").first().isVisible())) fail("manifest mis
 console.log("✓ manifest");
 
 // 7. 登機口：手動幫林小美報到
-await page.goto(BASE + "/admin/DN-0808/boarding");
+await page.goto(BASE + "/admin/DN-0812/boarding");
 await page.waitForTimeout(1500);
 await page.getByPlaceholder(/搜尋姓名/).fill("林小美");
 await page.waitForTimeout(400);

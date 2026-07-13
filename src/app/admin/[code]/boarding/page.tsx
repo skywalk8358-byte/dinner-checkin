@@ -92,7 +92,7 @@ export default function BoardingPage() {
                 if (!q) return true;
                 return (
                   a.name.toLowerCase().includes(q) ||
-                  (a.dept ?? "").toLowerCase().includes(q) ||
+                  (a.industry ?? "").toLowerCase().includes(q) ||
                   (a.seat ?? "").toLowerCase().includes(q)
                 );
               })
@@ -142,7 +142,9 @@ export default function BoardingPage() {
                         {"attendee" in flash && (
                           <div className="mt-2.5 text-[17px] font-semibold">
                             {flash.attendee.name}
-                            {flash.attendee.dept && <span className="ml-2 text-[13px] opacity-75">{flash.attendee.dept}</span>}
+                            {flash.attendee.industry && (
+                              <span className="ml-2 text-[13px] opacity-75">{flash.attendee.industry}</span>
+                            )}
                             {flash.attendee.seat && <span className="ml-3">座位 {flash.attendee.seat}</span>}
                           </div>
                         )}
@@ -156,7 +158,7 @@ export default function BoardingPage() {
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       className="field-input"
-                      placeholder="🔍 搜尋姓名 / 部門 / 座位（手動報到備援）"
+                      placeholder="🔍 搜尋姓名 / 產業 / 座位（手動報到備援）"
                     />
                     <div className="card mt-3 max-h-[480px] overflow-y-auto">
                       {list.length === 0 ? (
@@ -172,7 +174,7 @@ export default function BoardingPage() {
                                 {a.seat ?? "—"}
                               </span>
                               <span className="truncate text-[14px] font-semibold">{a.name}</span>
-                              {a.dept && <span className="text-sub hidden text-[12px] sm:inline">{a.dept}</span>}
+                              {a.industry && <span className="text-sub hidden text-[12px] sm:inline">{a.industry}</span>}
                             </div>
                             {a.checkedInAt ? (
                               <button

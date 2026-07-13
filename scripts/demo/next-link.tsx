@@ -4,6 +4,7 @@
 export default function Link({
   href,
   children,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   target: _target,
   ...rest
 }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) {
