@@ -51,6 +51,7 @@ function CreateFlightForm() {
   const [tableCount, setTableCount] = useState(6);
   const [seatsPerTable, setSeatsPerTable] = useState(10);
   const [vipTables, setVipTables] = useState(1);
+  const [inviteOnly, setInviteOnlyChecked] = useState(false);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [createdCode, setCreatedCode] = useState<string | null>(null);
@@ -88,6 +89,7 @@ function CreateFlightForm() {
       tableCount,
       seatsPerTable,
       vipTables: Math.min(vipTables, tableCount),
+      inviteOnly,
       notes: notes.trim() || undefined,
     });
     setCreatedCode(flight.code);
@@ -197,7 +199,19 @@ function CreateFlightForm() {
 
           <label className="block sm:col-span-2">
             <L>備註（顯示在活動頁）</L>
-            <input value={notes} onChange={(e) => setNotes(e.target.value)} className="field-input" placeholder="備有素食桌…" />
+            <input value={notes} onChange={(e) => setNotes(e.target.value)} className="field-input" placeholder="注意事項…" />
+          </label>
+
+          <label className="flex items-center gap-2.5 sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={inviteOnly}
+              onChange={(e) => setInviteOnlyChecked(e.target.checked)}
+              className="h-4 w-4 accent-[#007aff]"
+            />
+            <span className="text-[14px]">
+              接龍名單制——只有匯入名單上的名字能報名（建立後到「乘客名單」頁貼上 LINE 接龍）
+            </span>
           </label>
 
           <div className="flex flex-wrap items-center gap-4 sm:col-span-2">

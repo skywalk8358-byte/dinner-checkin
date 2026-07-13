@@ -9,14 +9,14 @@
 
 import { useSyncExternalStore } from "react";
 import { seedDB } from "./seed";
-import type { Attendee, DB, Flight } from "./types";
+import type { Attendee, DB, Flight, Invite } from "./types";
 import { flightCapacity } from "./types";
 
 export { useHydrated } from "./client";
 
-// v2：欄位改版（dept/meal → industry/note），換 key 讓舊快取自動重播種子
-const LS_KEY = "dinner-checkin:v2";
-const EMPTY_DB: DB = { flights: [], attendees: [] };
+// v3：新增接龍名單（invites）與群組報名，換 key 讓舊快取自動重播種子
+const LS_KEY = "dinner-checkin:v3";
+const EMPTY_DB: DB = { flights: [], attendees: [], invites: [] };
 
 let state: DB = load();
 const listeners = new Set<() => void>();
@@ -27,7 +27,9 @@ function load(): DB {
     const raw = window.localStorage.getItem(LS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as DB;
-      if (Array.isArray(parsed.flights) && Array.isArray(parsed.attendees)) return parsed;
+      if (Array.isArray(parsed.flights) && Array.isArray(parsed.attendees) && Array.isArray(parsed.invites)) {
+        return parsed;
+      }
     }
   } catch {
     // 壞資料就重新播種
@@ -99,6 +101,81 @@ export function byToken(db: DB, token: string): Attendee | undefined {
   return db.attendees.find((a) => a.passToken.toLowerCase() === token.toLowerCase());
 }
 
+/** 同一次報名的同行者（含本人），已取消的不算 */
+export function groupOf(db: DB, attendee: Attendee): Attendee[] {
+  if (!attendee.groupId) return [attendee];
+  return db.attendees.filter((a) => a.groupId === attendee.groupId && a.status !== "cancelled");
+}
+
+// ── 接龍名單（邀請） ─────────────────────────────────────
+
+export function invitesOf(db: DB, flightId: string): Invite[] {
+  return db.invites
+    .filter((i) => i.flightId === flightId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export function inviteByName(db: DB, flightId: string, name: string): Invite | undefined {
+  const q = name.trim().toLowerCase();
+  if (!q) return undefined;
+  return invitesOf(db, flightId).find((i) => i.name.toLowerCase() === q);
+}
+
+/** 這筆接龍名額已被用掉幾位（已取消的還回去） */
+export function inviteUsed(db: DB, inviteId: string): number {
+  return db.attendees.filter((a) => a.inviteId === inviteId && a.status !== "cancelled").length;
+}
+
+/** 匯入接龍名單：同名字就更新名額，其餘新增；回傳筆數統計 */
+export function importInvites(flightId: string, entries: { name: string; quota: number }[]): {
+  added: number;
+  updated: number;
+} {
+  let added = 0;
+  let updated = 0;
+  let invites = [...state.invites];
+  for (const e of entries) {
+    const name = e.name.trim();
+    if (!name) continue;
+    const existing = invites.find((i) => i.flightId === flightId && i.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      if (existing.quota !== e.quota) {
+        invites = invites.map((i) => (i.id === existing.id ? { ...i, quota: e.quota } : i));
+        updated += 1;
+      }
+    } else {
+      invites.push({
+        id: crypto.randomUUID(),
+        flightId,
+        name,
+        quota: e.quota,
+        createdAt: new Date().toISOString(),
+      });
+      added += 1;
+    }
+  }
+  commit({ ...state, invites });
+  return { added, updated };
+}
+
+export function setInviteQuota(inviteId: string, quota: number) {
+  commit({
+    ...state,
+    invites: state.invites.map((i) => (i.id === inviteId ? { ...i, quota: Math.max(1, quota) } : i)),
+  });
+}
+
+export function deleteInvite(inviteId: string) {
+  commit({ ...state, invites: state.invites.filter((i) => i.id !== inviteId) });
+}
+
+export function setInviteOnly(flightId: string, inviteOnly: boolean) {
+  commit({
+    ...state,
+    flights: state.flights.map((f) => (f.id === flightId ? { ...f, inviteOnly } : f)),
+  });
+}
+
 // ── actions ─────────────────────────────────────────────────
 
 const TOKEN_ABC = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -123,6 +200,7 @@ export interface NewFlight {
   tableCount: number;
   seatsPerTable: number;
   vipTables: number;
+  inviteOnly?: boolean;
   notes?: string;
 }
 
@@ -144,6 +222,7 @@ export function createFlight(input: NewFlight): Flight {
       ...(i < input.vipTables ? { vip: true } : {}),
     })),
     status: "open",
+    inviteOnly: input.inviteOnly,
     notes: input.notes,
     createdAt: new Date().toISOString(),
   };
@@ -158,48 +237,74 @@ export function setFlightStatus(flightId: string, status: Flight["status"]) {
   });
 }
 
-export interface NewAttendee {
+export interface GroupSignup {
   flightId: string;
-  name: string;
-  industry?: string;
+  /** 接龍模式必填：用哪一筆接龍名額 */
+  inviteId?: string;
+  /** 這次一起報名的所有人（第一位是主報名者） */
+  people: { name: string; industry?: string }[];
+  /** 備註（忌口等），記在主報名者身上 */
   note?: string;
-  seat?: string;
+  /** 與 people 一一對應的座位；候補時傳空陣列 */
+  seats: string[];
 }
 
-export type SignupResult =
-  | { ok: true; attendee: Attendee }
-  | { ok: false; reason: "seat-taken" | "flight-missing" };
+export type GroupResult =
+  | { ok: true; attendees: Attendee[] }
+  | {
+      ok: false;
+      reason: "flight-missing" | "invite-required" | "quota-exceeded" | "seat-taken" | "seat-mismatch" | "not-enough-seats";
+    };
 
-/** 報名。滿了自動轉候補；座位若剛好被搶走則回報失敗讓使用者重選。 */
-export function addAttendee(input: NewAttendee): SignupResult {
+/**
+ * 群組報名（1 人也走這裡）。接龍模式會硬性檢查名額：
+ * 接龍寫 +1 就只能報 2 位，想多報直接擋下。
+ */
+export function addGroup(input: GroupSignup): GroupResult {
   const flight = state.flights.find((f) => f.id === input.flightId);
   if (!flight) return { ok: false, reason: "flight-missing" };
+  const people = input.people
+    .map((p) => ({ name: p.name.trim(), industry: p.industry?.trim() || undefined }))
+    .filter((p) => p.name);
+  if (people.length === 0) return { ok: false, reason: "seat-mismatch" };
 
-  const confirmed = confirmedOf(state, flight.id);
-  const full = confirmed.length >= flightCapacity(flight);
-
-  let seat = input.seat;
-  let status: Attendee["status"] = "confirmed";
-  if (full) {
-    seat = undefined;
-    status = "standby";
-  } else if (seat && takenSeats(state, flight.id).has(seat)) {
-    return { ok: false, reason: "seat-taken" };
+  // 接龍名額檢查
+  if (flight.inviteOnly) {
+    const invite = input.inviteId ? state.invites.find((i) => i.id === input.inviteId) : undefined;
+    if (!invite || invite.flightId !== flight.id) return { ok: false, reason: "invite-required" };
+    if (inviteUsed(state, invite.id) + people.length > invite.quota) {
+      return { ok: false, reason: "quota-exceeded" };
+    }
   }
 
-  const attendee: Attendee = {
+  const isStandby = input.seats.length === 0;
+  if (!isStandby) {
+    if (input.seats.length !== people.length) return { ok: false, reason: "seat-mismatch" };
+    if (new Set(input.seats).size !== input.seats.length) return { ok: false, reason: "seat-taken" };
+    const taken = takenSeats(state, flight.id);
+    if (input.seats.some((s) => taken.has(s))) return { ok: false, reason: "seat-taken" };
+    if (confirmedOf(state, flight.id).length + people.length > flightCapacity(flight)) {
+      return { ok: false, reason: "not-enough-seats" };
+    }
+  }
+
+  const groupId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const created: Attendee[] = people.map((p, i) => ({
     id: crypto.randomUUID(),
     flightId: flight.id,
-    name: input.name.trim(),
-    industry: input.industry?.trim() || undefined,
-    note: input.note?.trim() || undefined,
-    seat,
-    status,
+    name: p.name,
+    industry: p.industry,
+    note: i === 0 ? input.note?.trim() || undefined : undefined,
+    seat: isStandby ? undefined : input.seats[i],
+    inviteId: flight.inviteOnly ? input.inviteId : undefined,
+    groupId,
+    status: isStandby ? "standby" : "confirmed",
     passToken: genToken(flight.code),
-    createdAt: new Date().toISOString(),
-  };
-  commit({ ...state, attendees: [...state.attendees, attendee] });
-  return { ok: true, attendee };
+    createdAt: now,
+  }));
+  commit({ ...state, attendees: [...state.attendees, ...created] });
+  return { ok: true, attendees: created };
 }
 
 function patchAttendee(id: string, patch: Partial<Attendee>) {

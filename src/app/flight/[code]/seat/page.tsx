@@ -7,11 +7,11 @@ import { BoardHeader, BoardShell, Loading, NotFoundBoard } from "@/components/Ch
 import { SeatLegend, SeatMap } from "@/components/SeatMap";
 import { clearPending, StepBar, usePendingSignup } from "@/components/StepBar";
 import { useHydrated } from "@/lib/client";
-import { addAttendee, assignSeat, byToken, flightByCode, takenSeats, useDB } from "@/lib/store";
+import { addGroup, assignSeat, byToken, flightByCode, takenSeats, useDB } from "@/lib/store";
 
 /**
  * 選位頁。兩種進場方式：
- * 1. 報名流程第二步（旅客資料暫存於 pending store / sessionStorage）
+ * 1. 報名流程第二步——一次為整組人選位（一人一個座位，依點選順序配對）
  * 2. 已有登機證但還沒座位的人補選位：/flight/XX/seat?pass=<token>
  */
 export default function SeatPage() {
@@ -24,7 +24,7 @@ export default function SeatPage() {
   const flight = hydrated ? flightByCode(db, decodeURIComponent(code)) : undefined;
   const pending = usePendingSignup(reseatToken ? undefined : flight?.code);
 
-  const [selected, setSelected] = useState<string | undefined>();
+  const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   // 點擊已入座的座位 → 顯示是誰（姓名＋產業）
   const [peek, setPeek] = useState<{ code: string; name: string; industry?: string } | null>(null);
@@ -70,29 +70,55 @@ export default function SeatPage() {
   }
 
   const taken = takenSeats(db, flight.id);
-  const passengerName = pending?.name ?? reseatAttendee?.name ?? "";
+  const people = reseatAttendee
+    ? [{ name: reseatAttendee.name, industry: reseatAttendee.industry ?? "" }]
+    : (pending?.people ?? []);
+  const need = people.length;
+
+  const toggleSeat = (seatCode: string) => {
+    setError(null);
+    setSelected((prev) => {
+      if (prev.includes(seatCode)) return prev.filter((s) => s !== seatCode);
+      if (prev.length < need) return [...prev, seatCode];
+      // 已選滿：換掉最後一個
+      return [...prev.slice(0, need - 1), seatCode];
+    });
+  };
 
   const confirm = () => {
-    if (!selected) return;
+    if (selected.length !== need) return;
 
     if (pending) {
-      const res = addAttendee({ flightId: flight.id, ...pending, seat: selected });
+      const res = addGroup({
+        flightId: flight.id,
+        inviteId: pending.inviteId,
+        people: pending.people,
+        note: pending.note,
+        seats: selected,
+      });
       if (!res.ok) {
-        setError("這個座位剛被別人選走了，請再挑一個。");
-        setSelected(undefined);
+        if (res.reason === "seat-taken") {
+          setError("有座位剛被別人選走了，請重新選擇。");
+          setSelected([]);
+        } else if (res.reason === "quota-exceeded") {
+          setError("接龍名額不足（可能剛被使用），請回上一步確認。");
+        } else if (res.reason === "not-enough-seats") {
+          setError("剩餘座位不足，請回上一步調整人數。");
+        } else {
+          setError("報名失敗，請回上一步重新開始。");
+        }
         return;
       }
       setDone(true);
       clearPending(flight.code);
-      const suffix = res.attendee.status === "standby" ? "&standby=1" : "";
-      router.push(`/pass/${res.attendee.passToken}?new=1${suffix}`);
+      router.push(`/pass/${res.attendees[0].passToken}?new=1`);
       return;
     }
 
     if (reseatAttendee) {
-      if (!assignSeat(reseatAttendee.id, selected)) {
+      if (!assignSeat(reseatAttendee.id, selected[0])) {
         setError("這個座位剛被別人選走了，請再挑一個。");
-        setSelected(undefined);
+        setSelected([]);
         return;
       }
       router.push(`/pass/${reseatAttendee.passToken}`);
@@ -108,7 +134,10 @@ export default function SeatPage() {
         <div>
           <h1 className="text-[22px] font-bold tracking-tight">選擇座位</h1>
           <p className="text-sub mt-1 text-[13px]">
-            {passengerName} · 點空位入座；點已入座的位子可以看看是誰
+            {need > 1
+              ? `請為 ${people.map((p) => p.name).join("、")} 選 ${need} 個位子（依點選順序配對）`
+              : `${people[0]?.name ?? ""} · 點空位入座`}
+            ；點已入座的位子可以看看是誰
           </p>
         </div>
         <SeatLegend />
@@ -131,20 +160,30 @@ export default function SeatPage() {
         flight={flight}
         taken={taken}
         selected={selected}
-        onSelect={(s) => {
-          setSelected(s);
-          setError(null);
-        }}
-        onPeek={(code, attendee) => setPeek({ code, name: attendee.name, industry: attendee.industry })}
+        onSelect={toggleSeat}
+        onPeek={(seatCode, attendee) => setPeek({ code: seatCode, name: attendee.name, industry: attendee.industry })}
       />
 
       {/* 底部確認列 */}
       <div className="sticky bottom-3 mt-6">
         <div className="card flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
-          <div className="flex items-baseline gap-2.5">
-            <span className="text-sub text-[13px] font-medium">座位</span>
-            <span className="text-accent text-[24px] font-extrabold tabular-nums">{selected ?? "—"}</span>
-          </div>
+          {need > 1 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {people.map((p, i) => (
+                <span key={i} className="pill pill-dim text-[13px]">
+                  {p.name}
+                  <span className={`ml-1 font-bold ${selected[i] ? "text-accent" : "text-sub"}`}>
+                    {selected[i] ?? "—"}
+                  </span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-baseline gap-2.5">
+              <span className="text-sub text-[13px] font-medium">座位</span>
+              <span className="text-accent text-[24px] font-extrabold tabular-nums">{selected[0] ?? "—"}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2.5">
             <Link
               href={pending ? `/flight/${flight.code}/checkin` : `/pass/${reseatToken}`}
@@ -152,7 +191,7 @@ export default function SeatPage() {
             >
               ← 上一步
             </Link>
-            <button onClick={confirm} disabled={!selected} className="btn btn-primary">
+            <button onClick={confirm} disabled={selected.length !== need} className="btn btn-primary">
               CONFIRM · 確認選位
             </button>
           </div>

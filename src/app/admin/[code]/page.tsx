@@ -9,16 +9,22 @@ import { fmtDate, fmtTime } from "@/lib/format";
 import {
   cancelAttendee,
   confirmedOf,
+  deleteInvite,
   flightByCode,
+  importInvites,
+  inviteUsed,
+  invitesOf,
   promoteStandby,
   setBoarded,
   setFlightStatus,
+  setInviteOnly,
+  setInviteQuota,
   standbyOf,
   useDB,
   useHydrated,
 } from "@/lib/store";
 import type { Attendee, Flight } from "@/lib/types";
-import { flightCapacity, splitSeat } from "@/lib/types";
+import { flightCapacity, parseInviteText, splitSeat } from "@/lib/types";
 
 function seatCompare(a?: string, b?: string): number {
   if (!a && !b) return 0;
@@ -72,6 +78,8 @@ export default function ManifestPage() {
   const db = useDB();
   const hydrated = useHydrated();
   const [copied, setCopied] = useState(false);
+  const [inviteText, setInviteText] = useState("");
+  const [importMsg, setImportMsg] = useState<string | null>(null);
 
   return (
     <BoardShell wide>
@@ -199,7 +207,98 @@ export default function ManifestPage() {
                   >
                     {flight.status === "open" ? "截止報名" : "重新開放"}
                   </button>
+                  <button
+                    onClick={() => setInviteOnly(flight.id, !flight.inviteOnly)}
+                    className="btn btn-secondary px-3.5 py-2 text-[13px]"
+                  >
+                    接龍名單制：{flight.inviteOnly ? "開啟中 ✓" : "關閉中"}
+                  </button>
                 </div>
+
+                {flight.inviteOnly && (
+                  <div className="card mt-5 p-5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <h2 className="text-[16px] font-bold">接龍名單</h2>
+                      <span className="text-sub text-[12px]">
+                        只有名單上的名字能報名，且不能超過各自名額
+                      </span>
+                    </div>
+
+                    <textarea
+                      value={inviteText}
+                      onChange={(e) => setInviteText(e.target.value)}
+                      className="field-input mt-3 min-h-24 font-mono text-[13px]"
+                      placeholder={"把 LINE 接龍直接貼進來，例如：\n1. 王大明 +1\n2. 李小美 2位\n3. 陳大文"}
+                    />
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={() => {
+                          const entries = parseInviteText(inviteText);
+                          if (entries.length === 0) {
+                            setImportMsg("看不懂這段文字，請一行一個名字。");
+                            return;
+                          }
+                          const r = importInvites(flight.id, entries);
+                          setImportMsg(`✓ 新增 ${r.added} 筆、更新 ${r.updated} 筆`);
+                          setInviteText("");
+                        }}
+                        className="btn btn-primary px-3.5 py-2 text-[13px]"
+                      >
+                        解析並匯入
+                      </button>
+                      {importMsg && <span className="text-sub text-[13px]">{importMsg}</span>}
+                    </div>
+
+                    {(() => {
+                      const invites = invitesOf(db, flight.id);
+                      if (invites.length === 0) {
+                        return <p className="text-warn-deep mt-4 text-[13px]">名單還是空的——現在沒有任何人能報名。</p>;
+                      }
+                      const totalQuota = invites.reduce((n, i) => n + i.quota, 0);
+                      return (
+                        <div className="mt-4">
+                          <div className="text-sub mb-2 text-[12px]">
+                            共 {invites.length} 筆、總名額 {totalQuota} 位（座位上限 {cap}）
+                          </div>
+                          <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+                            {invites.map((inv) => {
+                              const invUsed = inviteUsed(db, inv.id);
+                              return (
+                                <div
+                                  key={inv.id}
+                                  className="flex items-center justify-between gap-3 border-t border-line py-2"
+                                >
+                                  <span className="min-w-0 truncate text-[14px] font-semibold">{inv.name}</span>
+                                  <span className="flex shrink-0 items-center gap-2 text-[13px]">
+                                    <span className={invUsed >= inv.quota ? "text-ok-deep" : "text-sub"}>
+                                      已用 {invUsed}/
+                                    </span>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={20}
+                                      value={inv.quota}
+                                      onChange={(e) => setInviteQuota(inv.id, Number(e.target.value) || 1)}
+                                      className="field-input w-16 px-2 py-1 text-center text-[13px]"
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        if (confirm(`刪除「${inv.name}」的名額？（已報名的人不會被取消）`)) deleteInvite(inv.id);
+                                      }}
+                                      className="btn btn-danger px-2.5 py-1 text-[12px]"
+                                    >
+                                      刪
+                                    </button>
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
 
                 <div className="card mt-5 overflow-hidden">
                   <div className="text-sub border-b border-line px-4 py-2.5 text-[12px] font-medium">

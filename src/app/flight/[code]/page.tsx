@@ -123,6 +123,11 @@ export default function FlightPage() {
           <Link href="/" className="btn btn-secondary w-full text-[14px]">
             ← 所有航班
           </Link>
+          {flight.inviteOnly && (canCheckin || canStandby) && (
+            <p className="text-sub text-center text-[12px]">
+              本活動採 LINE 接龍名單制——請用接龍時的名字報名，名額以接龍為準
+            </p>
+          )}
         </div>
       </div>
 

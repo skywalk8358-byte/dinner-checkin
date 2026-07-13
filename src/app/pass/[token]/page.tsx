@@ -6,7 +6,7 @@ import { useState } from "react";
 import { BoardingPass } from "@/components/BoardingPass";
 import { BoardHeader, BoardShell, Loading, NotFoundBoard } from "@/components/Chrome";
 import { StepBar } from "@/components/StepBar";
-import { byToken, useDB, useHydrated } from "@/lib/store";
+import { byToken, groupOf, useDB, useHydrated } from "@/lib/store";
 
 /** 個人登機證頁 —— 報名完成的最終畫面，也是之後回訪、入場出示的頁面 */
 export default function PassPage() {
@@ -77,6 +77,29 @@ export default function PassPage() {
       </div>
 
       <BoardingPass flight={flight} attendee={attendee} animate={isNew} />
+
+      {(() => {
+        const companions = groupOf(db, attendee).filter((a) => a.id !== attendee.id);
+        if (companions.length === 0) return null;
+        return (
+          <div className="no-print card mx-auto mt-4 w-full max-w-[420px] px-5 py-4">
+            <div className="text-sub text-[12px] font-medium">同行旅客 · 把各自的登機證傳給他們</div>
+            <div className="mt-2 flex flex-col gap-1.5">
+              {companions.map((c) => (
+                <div key={c.id} className="flex items-center justify-between gap-3">
+                  <span className="text-[14px] font-semibold">
+                    {c.name}
+                    <span className="text-accent ml-2 font-bold">{c.seat ?? "候補"}</span>
+                  </span>
+                  <Link href={`/pass/${c.passToken}`} className="text-accent text-[13px] font-medium">
+                    查看登機證 →
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="no-print mx-auto mt-5 flex w-full max-w-[420px] flex-col gap-2.5">
         <button onClick={() => window.print()} className="btn btn-primary w-full">

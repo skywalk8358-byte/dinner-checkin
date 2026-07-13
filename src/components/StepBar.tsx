@@ -6,8 +6,10 @@ import { useSyncExternalStore } from "react";
 const pendingKey = (flightCode: string) => `dinner-checkin:pending:${flightCode}`;
 
 export interface PendingSignup {
-  name: string;
-  industry: string;
+  /** 接龍模式下：這次報名用的名額 id */
+  inviteId?: string;
+  /** 這次一起報名的所有人（第一位是主報名者） */
+  people: { name: string; industry: string }[];
   note: string;
 }
 

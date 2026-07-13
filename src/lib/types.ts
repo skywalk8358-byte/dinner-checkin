@@ -31,7 +31,20 @@ export interface Flight {
   gate: string;
   tables: TableConfig[];
   status: "open" | "closed";
+  /** 接龍模式：只有邀請名單（LINE 接龍）上的名字能報名，且不能超過各自名額 */
+  inviteOnly?: boolean;
   notes?: string;
+  createdAt: string;
+}
+
+/** 接龍名單（邀請）：一列接龍 = 一個名字 + 名額 */
+export interface Invite {
+  id: string;
+  flightId: string;
+  /** 接龍上的名字（主報名者） */
+  name: string;
+  /** 名額（含本人），例如「王大明 +1」= 2 */
+  quota: number;
   createdAt: string;
 }
 
@@ -45,6 +58,10 @@ export interface Attendee {
   note?: string;
   /** 座位代號，如 "3F"；候補或尚未選位時為空 */
   seat?: string;
+  /** 使用哪一筆接龍名額報進來的 */
+  inviteId?: string;
+  /** 一起報名的同行群組（同一次報名共用一個 id） */
+  groupId?: string;
   status: "confirmed" | "standby" | "cancelled";
   /** 已報到（登機）時間；未報到為空 */
   checkedInAt?: string;
@@ -56,6 +73,37 @@ export interface Attendee {
 export interface DB {
   flights: Flight[];
   attendees: Attendee[];
+  invites: Invite[];
+}
+
+/**
+ * 解析 LINE 接龍文字 → 邀請名單。
+ * 支援常見寫法：「1. 王大明 +1」「2、李小美 2位」「陳大文」「王big明 3」
+ */
+export function parseInviteText(text: string): { name: string; quota: number }[] {
+  const out: { name: string; quota: number }[] = [];
+  for (const rawLine of text.split(/\r?\n/)) {
+    // 去掉開頭的接龍編號與符號：「12.」「3、」「(5)」「- 」等
+    const line = rawLine.trim().replace(/^[\s\-–—•·*]*\(?\d+\)?[.、,)]\s*/, "").trim();
+    if (!line) continue;
+
+    let quota = 1;
+    const plus = line.match(/\+\s*(\d+)/);
+    const wei = line.match(/(\d+)\s*位/);
+    const tail = line.match(/\s(\d+)$/);
+    if (plus) quota = 1 + Number(plus[1]);
+    else if (wei) quota = Number(wei[1]);
+    else if (tail) quota = Number(tail[1]);
+
+    const name = line
+      .replace(/\+\s*\d+/, "")
+      .replace(/\d+\s*位/, "")
+      .replace(/\s\d+$/, "")
+      .trim();
+    if (!name) continue;
+    out.push({ name, quota: Math.max(1, Math.min(20, quota)) });
+  }
+  return out;
 }
 
 /** 座位字母：跳過 I、O，避免跟 1、0 混淆（真的航空公司也這樣做） */

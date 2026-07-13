@@ -1,4 +1,4 @@
-import type { Attendee, DB, Flight, TableConfig } from "./types";
+import type { Attendee, DB, Flight, Invite, TableConfig } from "./types";
 
 /** 示範登機證代碼 —— 可直接開 /pass/DN0812-DEMO01 看效果 */
 export const DEMO_PASS_TOKEN = "DN0812-DEMO01";
@@ -23,33 +23,8 @@ function tables(n: number, seats: number, vip = 0): TableConfig[] {
   }));
 }
 
-let seq = 0;
-function mk(
-  flightId: string,
-  tokenPrefix: string,
-  name: string,
-  industry: string,
-  seat?: string,
-  extra: Partial<Attendee> = {},
-): Attendee {
-  seq += 1;
-  return {
-    id: `a-${flightId}-${seq}`,
-    flightId,
-    name,
-    industry,
-    seat,
-    status: "confirmed",
-    passToken: `${tokenPrefix}-S${String(seq).padStart(3, "0")}`,
-    createdAt: iso(-3, 9, seq),
-    ...extra,
-  };
-}
-
 export function seedDB(): DB {
-  seq = 0;
-
-  // 主活動：19 張站桌 × 5 位 = 95 席
+  // 主活動：19 張站桌 × 5 位 = 95 席，接龍模式
   const f1: Flight = {
     id: "f-0812",
     code: "DN-0812",
@@ -63,6 +38,7 @@ export function seedDB(): DB {
     gate: "PARK2 草悟廣場",
     tables: tables(19, 5),
     status: "open",
+    inviteOnly: true,
     notes:
       "⭐️ 飲酒適量，請注意安全回家\n⭐️ 參與人數越多低消金額越低哦\n⭐️ 給予大家更多的線下交流時間",
     createdAt: iso(-7, 10),
@@ -98,18 +74,76 @@ export function seedDB(): DB {
     createdAt: iso(-40, 10),
   };
 
-  const attendees: Attendee[] = [
-    mk(f1.id, "DN0812", "王大明", "餐飲業", "1A"),
-    mk(f1.id, "DN0812", "林怡君", "科技業", "1B"),
-    mk(f1.id, "DN0812", "陳志豪", "金融業", "1C", { passToken: DEMO_PASS_TOKEN }),
-    mk(f1.id, "DN0812", "張雅婷", "行銷媒體", "1D"),
-    mk(f1.id, "DN0812", "李國華", "製造業", "2A", { note: "海鮮過敏" }),
-    mk(f1.id, "DN0812", "黃淑芬", "醫療業", "2B"),
-    mk(f1.id, "DN0812", "吳建宏", "房地產", "2C"),
-    mk(f1.id, "DN0812", "蔡佩珊", "電商", "3A"),
-    mk(f1.id, "DN0812", "許家豪", "設計業", "3B", { note: "不吃牛" }),
-    mk(f1.id, "DN0812", "鄭麗文", "法律", "3C"),
-  ];
+  // ── 接龍名單與已報名者 ──
+  let inviteSeq = 0;
+  let seq = 0;
+  const invites: Invite[] = [];
+  const attendees: Attendee[] = [];
 
-  return { flights: [f1, f2, f3], attendees };
+  /** 建一筆接龍名額，並讓 members 依序入座（第一位是主報名者） */
+  function chain(
+    quota: number,
+    members: { name: string; industry: string; seat: string; note?: string; token?: string }[],
+  ) {
+    inviteSeq += 1;
+    const invite: Invite = {
+      id: `inv-${inviteSeq}`,
+      flightId: f1.id,
+      name: members[0]?.name ?? `保留 ${inviteSeq}`,
+      quota,
+      createdAt: iso(-5, 12, inviteSeq),
+    };
+    invites.push(invite);
+    const groupId = members.length ? `g-${inviteSeq}` : undefined;
+    for (const m of members) {
+      seq += 1;
+      attendees.push({
+        id: `a-${seq}`,
+        flightId: f1.id,
+        name: m.name,
+        industry: m.industry,
+        note: m.note,
+        seat: m.seat,
+        inviteId: invite.id,
+        groupId,
+        status: "confirmed",
+        passToken: m.token ?? `DN0812-S${String(seq).padStart(3, "0")}`,
+        createdAt: iso(-3, 9, seq),
+      });
+    }
+  }
+
+  /** 接龍上有名字、但還沒進來選位的人 */
+  function pendingChain(name: string, quota: number) {
+    inviteSeq += 1;
+    invites.push({
+      id: `inv-${inviteSeq}`,
+      flightId: f1.id,
+      name,
+      quota,
+      createdAt: iso(-5, 12, inviteSeq),
+    });
+  }
+
+  chain(2, [
+    { name: "王大明", industry: "餐飲業", seat: "1A" },
+    { name: "林怡君", industry: "科技業", seat: "1B" },
+  ]);
+  chain(1, [{ name: "陳志豪", industry: "金融業", seat: "1C", token: DEMO_PASS_TOKEN }]);
+  chain(1, [{ name: "張雅婷", industry: "行銷媒體", seat: "1D" }]);
+  chain(2, [
+    { name: "李國華", industry: "製造業", seat: "2A", note: "海鮮過敏" },
+    { name: "黃淑芬", industry: "醫療業", seat: "2B" },
+  ]);
+  chain(1, [{ name: "吳建宏", industry: "房地產", seat: "2C" }]);
+  chain(1, [{ name: "蔡佩珊", industry: "電商", seat: "3A" }]);
+  chain(1, [{ name: "許家豪", industry: "設計業", seat: "3B", note: "不吃牛" }]);
+  chain(1, [{ name: "鄭麗文", industry: "法律", seat: "3C" }]);
+
+  // 接龍上還沒進來選位的：拿「林小美」試試群組報名（名額 2）
+  pendingChain("林小美", 2);
+  pendingChain("周天成", 1);
+  pendingChain("陳美惠", 3);
+
+  return { flights: [f1, f2, f3], attendees, invites };
 }

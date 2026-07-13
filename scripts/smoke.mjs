@@ -43,34 +43,42 @@ await page.screenshot({ path: OUT + "02-flight.png", fullPage: true });
 if (!(await page.getByText("CHECK IN · 開始報名").isVisible())) fail("flight page missing check-in CTA");
 console.log("✓ flight page");
 
-// 3. 報名表單
+// 3. 報名表單：林小美是接龍名單上的名字（名額 2），一次報 2 位
 await page.getByText("CHECK IN · 開始報名").click();
 await page.waitForURL("**/checkin");
 await page.getByPlaceholder("王小明").fill("林小美");
+await page.waitForTimeout(400);
+if (!(await page.getByText(/接龍名額 2 位/).isVisible())) fail("invite quota hint missing");
 await page.getByPlaceholder("例：餐飲、科技、金融").fill("設計業");
-await page.waitForTimeout(1200);
+await page.getByText("2 位", { exact: true }).click();
+await page.getByPlaceholder("同行者姓名").fill("王小弟");
+await page.getByPlaceholder("產業（選填）").fill("學生");
+await page.waitForTimeout(800);
 await page.screenshot({ path: OUT + "03-checkin-form.png", fullPage: true });
-await page.getByText("NEXT · 前往選位").click();
-console.log("✓ check-in form");
+await page.getByText(/NEXT · 為 2 位選位/).click();
+console.log("✓ check-in form (invite, group of 2)");
 
-// 4. 選位（挑第 5 桌 A 位）
+// 4. 選位：一次選 5A + 5B
 await page.waitForURL("**/seat");
 await page.waitForTimeout(1500);
-const seat5A = page.locator("g").filter({ has: page.locator("title", { hasText: /^座位 5A$/ }) });
-await seat5A.click();
+const seat = (code) =>
+  page.locator("g").filter({ has: page.locator("title", { hasText: new RegExp(`^座位 ${code}$`) }) });
+await seat("5A").click();
+await seat("5B").click();
 await page.waitForTimeout(800);
 await page.screenshot({ path: OUT + "04-seatmap.png", fullPage: true });
 await page.getByText("CONFIRM · 確認選位").click();
-console.log("✓ seat selection");
+console.log("✓ seat selection (2 seats)");
 
-// 5. 登機證
+// 5. 登機證（主報名者）＋同行旅客清單
 await page.waitForURL("**/pass/**");
 await page.waitForTimeout(1800);
 await page.screenshot({ path: OUT + "05-boarding-pass.png", fullPage: true });
 const passUrl = page.url();
 if (!(await page.getByText("林小美").first().isVisible())) fail("pass missing passenger name");
 if (!(await page.locator(".ticket").getByText("5A").first().isVisible())) fail("pass missing seat 5A");
-console.log("✓ boarding pass:", passUrl);
+if (!(await page.getByText("王小弟").first().isVisible())) fail("pass missing companion");
+console.log("✓ boarding pass + companion:", passUrl);
 
 // 手機尺寸的登機證
 const mobile = await ctx.newPage();
@@ -100,7 +108,20 @@ await page.waitForTimeout(1200);
 await page.screenshot({ path: OUT + "08-boarding-gate.png", fullPage: true });
 console.log("✓ boarding gate manual check-in");
 
-// 8. 報到後的登機證要蓋 BOARDED 章
+// 8. 名額防呆：林小美的 2 位已用完，再報會被擋；不在名單上的名字會被警告
+await page.goto(BASE + "/flight/DN-0812/checkin");
+await page.getByPlaceholder("王小明").fill("林小美");
+await page.waitForTimeout(400);
+if (!(await page.getByText(/還可報 0 位/).isVisible())) fail("quota exhausted hint missing");
+await page.getByText(/NEXT ·/).click();
+await page.waitForTimeout(400);
+if (!(await page.getByText(/已全部使用/).isVisible())) fail("quota block message missing");
+await page.getByPlaceholder("王小明").fill("神秘客");
+await page.waitForTimeout(400);
+if (!(await page.getByText(/不在接龍名單上/).isVisible())) fail("not-on-list warning missing");
+console.log("✓ quota enforcement (over-signup blocked)");
+
+// 9. 報到後的登機證要蓋 BOARDED 章
 await page.goto(passUrl);
 await page.waitForTimeout(1800);
 await page.screenshot({ path: OUT + "09-pass-boarded.png", fullPage: true });

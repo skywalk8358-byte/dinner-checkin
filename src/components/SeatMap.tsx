@@ -8,10 +8,11 @@ import { SEAT_LETTERS, tableSeatCodes } from "@/lib/types";
  * 座位代號 = 桌號 + 字母（3F = 第 3 桌 F 位），跟機票的 12A 同一種語言。
  * 已入座的座位會標出乘客姓名；點擊可由 onPeek 顯示姓名＋產業。
  */
-export function SeatMap({ flight, taken, selected, onSelect, onPeek }: {
+export function SeatMap({ flight, taken, selected = [], onSelect, onPeek }: {
   flight: Flight;
   taken: Map<string, Attendee>;
-  selected?: string;
+  /** 已選的座位（群組報名會一次選多個） */
+  selected?: string[];
   onSelect?: (code: string) => void;
   onPeek?: (code: string, attendee: Attendee) => void;
 }) {
@@ -56,7 +57,7 @@ function shortName(name: string): string {
 function TableDisc({ table, taken, selected, onSelect, onPeek }: {
   table: TableConfig;
   taken: Map<string, Attendee>;
-  selected?: string;
+  selected: string[];
   onSelect?: (code: string) => void;
   onPeek?: (code: string, attendee: Attendee) => void;
 }) {
@@ -97,7 +98,7 @@ function TableDisc({ table, taken, selected, onSelect, onPeek }: {
           const x = cx + cos * seatRadius;
           const y = cy + sin * seatRadius;
           const occupant = taken.get(code);
-          const isSelected = selected === code;
+          const isSelected = selected.includes(code);
           const cls = isSelected ? "seat-selected" : occupant ? "seat-taken" : "seat-free";
           const clickable = occupant ? !!onPeek : !!onSelect;
           const handle = () => {
