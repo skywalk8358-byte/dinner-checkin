@@ -4,6 +4,7 @@
 視覺走 **Apple Wallet 票卡風**：亮色、大留白、卡片式、系統字體。
 
 **🔗 線上 Demo：https://skywalk8358-byte.github.io/dinner-checkin/**（單檔打包版，資料存於各自瀏覽器）
+**📋 後端建置規格：[BACKEND_SPEC.md](BACKEND_SPEC.md)**（給接手 Phase 2 的工程師）
 
 | 航班列表 | 登機證 |
 |---|---|
